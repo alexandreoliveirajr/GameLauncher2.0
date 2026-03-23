@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { Game } from '../types'
 import AddGameModal from '../components/AddGameModal'
 
@@ -12,13 +13,54 @@ export default function Home() {
   const [runningGameId, setRunningGameId] = useState<number | null>(null)
   const monitorRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  const gamesRef = useRef<Game[]>([])
+  const selectedRef = useRef(0)
+  const runningPidRef = useRef<number | null>(null)
+
   useEffect(() => {
     loadGames()
+  }, [])
+
+  useEffect(() => {
+    let unlisten: any
+    listen('gamepad_input', (event: any) => {
+      const action = event.payload
+
+      if (action === 'dpad_right' || action === 'dpad_down') {
+        const next = Math.min(selectedRef.current + 1, gamesRef.current.length - 1)
+        selectedRef.current = next
+        setSelected(next)
+      }
+
+      if (action === 'dpad_left' || action === 'dpad_up') {
+        const prev = Math.max(selectedRef.current - 1, 0)
+        selectedRef.current = prev
+        setSelected(prev)
+      }
+
+      if (action === 'confirm') {
+        const game = gamesRef.current[selectedRef.current]
+        if (game && !runningPidRef.current) {
+          launchGame(game)
+        }
+      }
+
+      if (action === 'back') {
+        setShowAdd(false)
+      }
+
+      if (action === 'menu') {
+        setShowAdd(true)
+      }
+
+    }).then((fn: any) => { unlisten = fn })
+    return () => { if (unlisten) unlisten() }
   }, [])
 
   async function loadGames() {
     try {
       const result = await invoke<Game[]>('list_games')
+      gamesRef.current = result
       setGames(result)
     } catch (e) {
       console.error(e)
@@ -27,10 +69,10 @@ export default function Home() {
     }
   }
 
-  async function handleLaunch(game: Game) {
-    if (runningPid) return
+  async function launchGame(game: Game) {
     try {
       const pid = await invoke<number>('launch_game', { gameId: game.id })
+      runningPidRef.current = pid
       setRunningPid(pid)
       setRunningGameId(game.id)
       startMonitor(pid, game.id)
@@ -39,19 +81,25 @@ export default function Home() {
     }
   }
 
+  async function handleLaunch(game: Game) {
+    if (runningPidRef.current) return
+    launchGame(game)
+  }
+
   function startMonitor(pid: number, gameId: number) {
     if (monitorRef.current) clearInterval(monitorRef.current)
     monitorRef.current = setInterval(async () => {
-        const running = await invoke<boolean>('is_process_running', { pid })
-        if (!running) {
-            clearInterval(monitorRef.current!)
-            await invoke('close_session', { gameId })
-            setRunningPid(null)
-            setRunningGameId(null)
-            loadGames()
-        }
+      const running = await invoke<boolean>('is_process_running', { pid })
+      if (!running) {
+        clearInterval(monitorRef.current!)
+        await invoke('close_session', { gameId })
+        runningPidRef.current = null
+        setRunningPid(null)
+        setRunningGameId(null)
+        loadGames()
+      }
     }, 3000)
-    }
+  }
 
   if (loading) {
     return (
@@ -107,7 +155,10 @@ export default function Home() {
                       ? '2px solid #4f8ef7'
                       : '2px solid rgba(255,255,255,0.06)',
                   }}
-                  onClick={() => setSelected(i)}
+                  onClick={() => {
+                    selectedRef.current = i
+                    setSelected(i)
+                  }}
                   onDoubleClick={() => handleLaunch(game)}
                 >
                   <div style={{
@@ -130,7 +181,7 @@ export default function Home() {
             })}
           </div>
 
-          {selected !== null && games[selected] && (
+          {games[selected] && (
             <div style={styles.launchBar}>
               <span style={styles.selectedName}>{games[selected].name}</span>
               <button
@@ -194,7 +245,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     padding: '32px 32px 0 32px',
     overflow: 'hidden',
-    },
+  },
   header: {
     display: 'flex',
     alignItems: 'center',
@@ -219,14 +270,14 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     paddingBottom: '88px',
     alignContent: 'start',
-    },
+  },
   card: {
     background: '#151820',
     borderRadius: '10px',
     overflow: 'hidden',
     cursor: 'pointer',
     height: '148px',
-    },
+  },
   cardThumb: {
     height: '100px',
     display: 'flex',

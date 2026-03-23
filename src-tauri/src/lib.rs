@@ -1,11 +1,13 @@
 mod db;
 mod commands;
+mod gamepad;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             db::init(app.handle())?;
+            gamepad::start_gamepad_listener(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
