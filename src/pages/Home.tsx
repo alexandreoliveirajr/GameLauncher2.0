@@ -3,16 +3,17 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Game } from '../types'
 import AddGameModal from '../components/AddGameModal'
+import ScanFolderModal from '../components/ScanFolderModal'
 
 export default function Home() {
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(0)
   const [showAdd, setShowAdd] = useState(false)
+  const [showScan, setShowScan] = useState(false)
   const [runningPid, setRunningPid] = useState<number | null>(null)
   const [runningGameId, setRunningGameId] = useState<number | null>(null)
   const monitorRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const gamesRef = useRef<Game[]>([])
   const selectedRef = useRef(0)
   const runningPidRef = useRef<number | null>(null)
@@ -47,6 +48,7 @@ export default function Home() {
 
       if (action === 'back') {
         setShowAdd(false)
+        setShowScan(false)
       }
 
       if (action === 'menu') {
@@ -118,25 +120,40 @@ export default function Home() {
         />
       )}
 
+      {showScan && (
+        <ScanFolderModal
+          onClose={() => setShowScan(false)}
+          onImported={loadGames}
+        />
+      )}
+
       {games.length === 0 ? (
         <div style={styles.center}>
           <h1 style={styles.logo}>NEXUS</h1>
           <p style={styles.muted}>Nenhum jogo na biblioteca ainda.</p>
-          <button style={styles.addBtn} onClick={() => setShowAdd(true)}>
-            + Adicionar Jogo
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button style={styles.addBtn} onClick={() => setShowAdd(true)}>
+              + Adicionar Jogo
+            </button>
+            <button style={styles.btnScan} onClick={() => setShowScan(true)}>
+              ⟳ Escanear Pasta
+            </button>
+          </div>
         </div>
       ) : (
         <div style={styles.container}>
           <div style={styles.header}>
             <span style={styles.logo}>NEXUS</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {runningPid && (
                 <span style={styles.runningBadge}>
                   ● {games.find(g => g.id === runningGameId)?.name} rodando
                 </span>
               )}
               <span style={styles.count}>{games.length} jogos</span>
+              <button style={styles.btnScan} onClick={() => setShowScan(true)}>
+                ⟳ Scan
+              </button>
               <button style={styles.addBtn} onClick={() => setShowAdd(true)}>
                 + Adicionar
               </button>
@@ -236,6 +253,17 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
     letterSpacing: '1px',
+  },
+  btnScan: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '10px 16px',
+    color: '#4f8ef7',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
   },
   container: {
     width: '100vw',

@@ -16,6 +16,8 @@ pub fn run() {
             commands::launch_game,
             commands::is_process_running,
             commands::close_session,
+            commands::scan_folder,
+            commands::import_games,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
