@@ -7,6 +7,13 @@ import ScanFolderModal from '../components/ScanFolderModal'
 import EditGameModal from '../components/EditGameModal'
 
 type Filter = 'all' | 'favorites' | string
+type DetailTab = 'info' | 'stats'
+
+interface SessionInfo {
+  day: string
+  totalSeconds: number
+  sessionCount: number
+}
 
 export default function Home() {
   const [games, setGames] = useState<Game[]>([])
@@ -16,6 +23,8 @@ export default function Home() {
   const [showScan, setShowScan] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
+  const [detailTab, setDetailTab] = useState<DetailTab>('info')
+  const [sessions, setSessions] = useState<SessionInfo[]>([])
   const [runningPid, setRunningPid] = useState<number | null>(null)
   const [runningGameId, setRunningGameId] = useState<number | null>(null)
   const [playtime, setPlaytime] = useState<number>(0)
@@ -81,6 +90,11 @@ export default function Home() {
     setPlaytime(seconds)
   }
 
+  async function loadSessions(gameId: number) {
+    const result = await invoke<SessionInfo[]>('get_game_sessions', { gameId })
+    setSessions(result)
+  }
+
   function formatPlaytime(seconds: number): string {
     if (seconds === 0) return '0min'
     if (seconds < 60) return `${seconds}s`
@@ -132,6 +146,7 @@ export default function Home() {
     setSelected(0)
     selectedRef.current = 0
     setPlaytime(0)
+    setSessions([])
     loadGames()
   }
 
@@ -159,7 +174,6 @@ export default function Home() {
   }
 
   const selectedGame = filtered[selected]
-  console.log('selectedGame:', selectedGame?.name, 'isFavorite:', selectedGame?.isFavorite)
 
   return (
     <>
@@ -244,7 +258,9 @@ export default function Home() {
                       onClick={() => {
                         selectedRef.current = i
                         setSelected(i)
+                        setDetailTab('info')
                         loadPlaytime(Number(game.id))
+                        loadSessions(Number(game.id))
                       }}
                       onDoubleClick={() => handleLaunch(game)}
                     >
@@ -273,59 +289,102 @@ export default function Home() {
               <div style={styles.detailThumb}>
                 <span style={{ fontSize: '56px' }}>🎮</span>
               </div>
+
+              <div style={styles.tabRow}>
+                <button
+                  style={{ ...styles.tab, ...(detailTab === 'info' ? styles.tabActive : {}) }}
+                  onClick={() => setDetailTab('info')}
+                >
+                  Info
+                </button>
+                <button
+                  style={{ ...styles.tab, ...(detailTab === 'stats' ? styles.tabActive : {}) }}
+                  onClick={() => setDetailTab('stats')}
+                >
+                  Sessões
+                </button>
+              </div>
+
+              {detailTab === 'info' && (
+                <div style={styles.detailBody}>
+                  <p style={styles.detailName}>{selectedGame.name}</p>
+                  <p style={styles.detailGenre}>{selectedGame.genre}</p>
+                  <div style={styles.statRow}>
+                    <div style={styles.statBox}>
+                      <p style={styles.statLabel}>Tempo total</p>
+                      <p style={styles.statValue}>{formatPlaytime(playtime)}</p>
+                    </div>
+                    <div style={styles.statBox}>
+                      <p style={styles.statLabel}>Último acesso</p>
+                      <p style={styles.statValue}>{formatDate(selectedGame.lastPlayedAt)}</p>
+                    </div>
+                  </div>
+                  <p style={styles.detailPath}>{selectedGame.exePath}</p>
+                  <button
+                    style={{ ...styles.playBtn, opacity: runningPid ? 0.5 : 1 }}
+                    onClick={() => handleLaunch(selectedGame)}
+                    disabled={!!runningPid}
+                  >
+                    ▶ Jogar
+                  </button>
+                  <button style={styles.editBtn} onClick={() => setShowEdit(true)}>
+                    ✎ Editar
+                  </button>
+                  <button
+                    style={{
+                      ...styles.favBtn,
+                      color: selectedGame.isFavorite ? '#f59e0b' : '#6b7280',
+                      borderColor: selectedGame.isFavorite ? '#f59e0b' : 'rgba(255,255,255,0.08)',
+                    }}
+                    onClick={() => handleToggleFavorite(Number(selectedGame.id))}
+                  >
+                    {selectedGame.isFavorite ? '♥ Favoritado' : '♡ Favoritar'}
+                  </button>
+                  <button
+                    style={styles.deleteBtn}
+                    onClick={() => handleDelete(Number(selectedGame.id))}
+                  >
+                    ✕ Remover
+                  </button>
+                </div>
+              )}
+
+              {detailTab === 'stats' && (
               <div style={styles.detailBody}>
                 <p style={styles.detailName}>{selectedGame.name}</p>
-                <p style={styles.detailGenre}>{selectedGame.genre}</p>
-
                 <div style={styles.statRow}>
                   <div style={styles.statBox}>
                     <p style={styles.statLabel}>Tempo total</p>
                     <p style={styles.statValue}>{formatPlaytime(playtime)}</p>
                   </div>
                   <div style={styles.statBox}>
-                    <p style={styles.statLabel}>Último acesso</p>
-                    <p style={styles.statValue}>{formatDate(selectedGame.lastPlayedAt)}</p>
+                    <p style={styles.statLabel}>Dias jogados</p>
+                    <p style={styles.statValue}>{sessions.length}</p>
                   </div>
                 </div>
-
-                <p style={styles.detailPath}>{selectedGame.exePath}</p>
-
-                <button
-                  style={{ ...styles.playBtn, opacity: runningPid ? 0.5 : 1 }}
-                  onClick={() => handleLaunch(selectedGame)}
-                  disabled={!!runningPid}
-                >
-                  ▶ Jogar
-                </button>
-
-                <button
-                  style={styles.editBtn}
-                  onClick={() => setShowEdit(true)}
-                >
-                  ✎ Editar
-                </button>
-
-                <button
-                  style={{
-                    ...styles.favBtn,
-                    color: selectedGame.isFavorite ? '#f59e0b' : '#6b7280',
-                    borderColor: selectedGame.isFavorite ? '#f59e0b' : 'rgba(255,255,255,0.08)',
-                  }}
-                  onClick={() => {
-                    console.log('Clique no favoritar, selectedGame.id:', selectedGame.id)
-                    handleToggleFavorite(Number(selectedGame.id))
-                  }}
-                >
-                  {selectedGame.isFavorite ? '♥ Favoritado' : '♡ Favoritar'}
-                </button>
-
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => handleDelete(Number(selectedGame.id))}
-                >
-                  ✕ Remover
-                </button>
+                {sessions.length === 0 ? (
+                  <p style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', marginTop: '16px' }}>
+                    Nenhuma sessão registrada ainda.
+                  </p>
+                ) : (
+                  <div style={styles.sessionList}>
+                    {sessions.map(s => (
+                      <div key={s.day} style={styles.sessionItem}>
+                        <div style={styles.sessionLeft}>
+                          <div style={styles.sessionDate}>{formatDate(s.day)}</div>
+                          <div style={styles.sessionCount}>
+                            {s.sessionCount} {s.sessionCount === 1 ? 'sessão' : 'sessões'}
+                          </div>
+                        </div>
+                        <div style={styles.sessionDuration}>
+                          {formatPlaytime(s.totalSeconds)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+              )}
             </div>
           )}
         </div>
@@ -500,6 +559,26 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
+  tabRow: {
+    display: 'flex',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+  },
+  tab: {
+    flex: 1,
+    background: 'none',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    padding: '10px',
+    color: '#6b7280',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    letterSpacing: '1px',
+  },
+  tabActive: {
+    color: '#4f8ef7',
+    borderBottom: '2px solid #4f8ef7',
+  },
   detailBody: {
     padding: '16px',
     display: 'flex',
@@ -555,7 +634,6 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '1px',
     width: '100%',
   },
-
   editBtn: {
     background: 'none',
     border: '1px solid rgba(255,255,255,0.08)',
@@ -610,4 +688,38 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
   },
+  sessionList: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '6px',
+    overflowY: 'auto' as const,
+    maxHeight: '280px',
+  },
+  sessionItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 10px',
+    background: '#1c2030',
+    borderRadius: '6px',
+  },
+  sessionDate: {
+    fontSize: '11px',
+    color: '#6b7280',
+  },
+  sessionDuration: {
+    fontSize: '12px',
+    fontWeight: 500,
+    color: '#e8eaf0',
+  },
+
+  sessionLeft: {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '2px',
+},
+sessionCount: {
+  fontSize: '10px',
+  color: '#4b5563',
+},
 }

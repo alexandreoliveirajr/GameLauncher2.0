@@ -284,3 +284,43 @@ pub fn update_game(
     ).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DailySession {
+    pub day: String,
+    pub total_seconds: i64,
+    pub session_count: i64,
+}
+
+#[tauri::command]
+pub fn get_game_sessions(
+    app: tauri::AppHandle,
+    game_id: i64,
+) -> Result<Vec<DailySession>, String> {
+    let conn = get_conn(&app)?;
+    let mut stmt = conn.prepare(
+        "SELECT
+            date(started_at) as day,
+            COALESCE(SUM(duration_seconds), 0) as total_seconds,
+            COUNT(*) as session_count
+         FROM sessions
+         WHERE game_id = ?1
+           AND duration_seconds IS NOT NULL
+         GROUP BY date(started_at)
+         ORDER BY day DESC
+         LIMIT 30"
+    ).map_err(|e| e.to_string())?;
+
+    let sessions = stmt.query_map([game_id], |row| {
+        Ok(DailySession {
+            day: row.get(0)?,
+            total_seconds: row.get(1)?,
+            session_count: row.get(2)?,
+        })
+    }).map_err(|e| e.to_string())?
+    .filter_map(|s| s.ok())
+    .collect();
+
+    Ok(sessions)
+}
