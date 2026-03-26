@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Game {
     pub id: i64,
     pub name: String,
@@ -225,4 +226,45 @@ pub fn import_games(
     }
 
     Ok(count)
+}
+
+#[tauri::command]
+pub fn toggle_favorite(app: tauri::AppHandle, game_id: i64) -> Result<bool, String> {
+    let conn = get_conn(&app)?;
+    
+    let current: i32 = conn.query_row(
+        "SELECT is_favorite FROM games WHERE id = ?1",
+        [game_id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let new_value = if current == 0 { 1 } else { 0 };
+
+    conn.execute(
+        "UPDATE games SET is_favorite = ?1 WHERE id = ?2",
+        [new_value, game_id as i32],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(new_value == 1)
+}
+
+#[tauri::command]
+pub fn delete_game(app: tauri::AppHandle, game_id: i64) -> Result<(), String> {
+    let conn = get_conn(&app)?;
+    conn.execute("DELETE FROM games WHERE id = ?1", [game_id])
+        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM sessions WHERE game_id = ?1", [game_id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_game_playtime(app: tauri::AppHandle, game_id: i64) -> Result<i64, String> {
+    let conn = get_conn(&app)?;
+    let total: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE game_id = ?1",
+        [game_id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    Ok(total)
 }
