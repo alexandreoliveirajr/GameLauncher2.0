@@ -21,6 +21,7 @@ pub fn run() {
             commands::toggle_favorite,
             commands::delete_game,
             commands::get_game_playtime,
+            commands::update_game,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

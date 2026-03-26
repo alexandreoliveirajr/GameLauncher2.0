@@ -268,3 +268,19 @@ pub fn get_game_playtime(app: tauri::AppHandle, game_id: i64) -> Result<i64, Str
     ).map_err(|e| e.to_string())?;
     Ok(total)
 }
+
+#[tauri::command]
+pub fn update_game(
+    app: tauri::AppHandle,
+    game_id: i64,
+    name: String,
+    exe_path: String,
+    genre: String,
+) -> Result<(), String> {
+    let conn = get_conn(&app)?;
+    conn.execute(
+        "UPDATE games SET name = ?1, exe_path = ?2, genre = ?3 WHERE id = ?4",
+        (&name, &exe_path, &genre, &game_id),
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}

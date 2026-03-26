@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import { Game } from '../types'
 import AddGameModal from '../components/AddGameModal'
 import ScanFolderModal from '../components/ScanFolderModal'
+import EditGameModal from '../components/EditGameModal'
 
 type Filter = 'all' | 'favorites' | string
 
@@ -13,6 +14,7 @@ export default function Home() {
   const [selected, setSelected] = useState(0)
   const [showAdd, setShowAdd] = useState(false)
   const [showScan, setShowScan] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
   const [runningPid, setRunningPid] = useState<number | null>(null)
   const [runningGameId, setRunningGameId] = useState<number | null>(null)
@@ -163,6 +165,13 @@ export default function Home() {
     <>
       {showAdd && <AddGameModal onClose={() => setShowAdd(false)} onAdded={loadGames} />}
       {showScan && <ScanFolderModal onClose={() => setShowScan(false)} onImported={loadGames} />}
+      {showEdit && selectedGame && (
+        <EditGameModal
+          game={selectedGame}
+          onClose={() => setShowEdit(false)}
+          onUpdated={loadGames}
+        />
+      )}
 
       {games.length === 0 ? (
         <div style={styles.center}>
@@ -287,6 +296,13 @@ export default function Home() {
                   disabled={!!runningPid}
                 >
                   ▶ Jogar
+                </button>
+
+                <button
+                  style={styles.editBtn}
+                  onClick={() => setShowEdit(true)}
+                >
+                  ✎ Editar
                 </button>
 
                 <button
@@ -537,6 +553,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
     letterSpacing: '1px',
+    width: '100%',
+  },
+
+  editBtn: {
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '7px',
+    padding: '8px',
+    color: '#6b7280',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
     width: '100%',
   },
   favBtn: {
