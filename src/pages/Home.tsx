@@ -5,6 +5,7 @@ import { Game } from '../types'
 import AddGameModal from '../components/AddGameModal'
 import ScanFolderModal from '../components/ScanFolderModal'
 import EditGameModal from '../components/EditGameModal'
+import GlobalStatsModal from '../components/GlobalStatsModal'
 
 type Filter = 'all' | 'favorites' | string
 type DetailTab = 'info' | 'stats'
@@ -22,6 +23,7 @@ export default function Home() {
   const [showAdd, setShowAdd] = useState(false)
   const [showScan, setShowScan] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
   const [sessions, setSessions] = useState<SessionInfo[]>([])
@@ -186,6 +188,9 @@ export default function Home() {
           onUpdated={loadGames}
         />
       )}
+      {showStats && (
+        <GlobalStatsModal onClose={() => setShowStats(false)} />
+      )}
 
       {games.length === 0 ? (
         <div style={styles.center}>
@@ -226,6 +231,9 @@ export default function Home() {
               </div>
             ))}
             <div style={styles.sidebarFooter}>
+              <button style={styles.statsBtn} onClick={() => setShowStats(true)}>
+                ◈ Stats
+              </button>
               <button style={styles.btnScan} onClick={() => setShowScan(true)}>⟳ Scan</button>
               <button style={styles.addBtn} onClick={() => setShowAdd(true)}>+ Adicionar</button>
             </div>
@@ -714,12 +722,26 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   sessionLeft: {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '2px',
-},
-sessionCount: {
-  fontSize: '10px',
-  color: '#4b5563',
-},
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '2px',
+  },
+  sessionCount: {
+    fontSize: '10px',
+    color: '#4b5563',
+  },
+
+  statsBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '10px 16px',
+    color: '#6b7280',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    width: '100%',
+    textAlign: 'center' as const,
+  },
 }

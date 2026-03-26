@@ -324,3 +324,55 @@ pub fn get_game_sessions(
 
     Ok(sessions)
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalStats {
+    pub total_games: i64,
+    pub total_sessions: i64,
+    pub total_seconds: i64,
+    pub most_played_name: Option<String>,
+    pub most_played_seconds: i64,
+    pub avg_session_seconds: i64,
+}
+
+#[tauri::command]
+pub fn get_global_stats(app: tauri::AppHandle) -> Result<GlobalStats, String> {
+    let conn = get_conn(&app)?;
+
+    let total_games: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM games", [], |r| r.get(0)
+    ).unwrap_or(0);
+
+    let total_sessions: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM sessions WHERE duration_seconds IS NOT NULL", [], |r| r.get(0)
+    ).unwrap_or(0);
+
+    let total_seconds: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE duration_seconds IS NOT NULL", [], |r| r.get(0)
+    ).unwrap_or(0);
+
+    let avg_session_seconds: i64 = if total_sessions > 0 {
+        total_seconds / total_sessions
+    } else { 0 };
+
+    let most_played: Option<(String, i64)> = conn.query_row(
+        "SELECT g.name, COALESCE(SUM(s.duration_seconds), 0) as total
+         FROM games g
+         LEFT JOIN sessions s ON s.game_id = g.id
+         GROUP BY g.id
+         ORDER BY total DESC
+         LIMIT 1",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?))
+    ).ok();
+
+    Ok(GlobalStats {
+        total_games,
+        total_sessions,
+        total_seconds,
+        most_played_name: most_played.as_ref().map(|(n, _)| n.clone()),
+        most_played_seconds: most_played.as_ref().map(|(_, s)| *s).unwrap_or(0),
+        avg_session_seconds,
+    })
+}
