@@ -6,6 +6,7 @@ import AddGameModal from '../components/AddGameModal'
 import ScanFolderModal from '../components/ScanFolderModal'
 import EditGameModal from '../components/EditGameModal'
 import GlobalStatsModal from '../components/GlobalStatsModal'
+import GameCard from '../components/GameCard'
 
 type Filter = 'all' | 'favorites' | string
 type DetailTab = 'info' | 'stats'
@@ -252,42 +253,23 @@ export default function Home() {
               </div>
             ) : (
               <div style={styles.grid}>
-                {filtered.map((game, i) => {
-                  const isRunning = runningGameId === game.id
-                  return (
-                    <div
-                      key={game.id}
-                      style={{
-                        ...styles.card,
-                        border: selected === i
-                          ? '2px solid #4f8ef7'
-                          : '2px solid rgba(255,255,255,0.06)',
-                      }}
-                      onClick={() => {
-                        selectedRef.current = i
-                        setSelected(i)
-                        setDetailTab('info')
-                        loadPlaytime(Number(game.id))
-                        loadSessions(Number(game.id))
-                      }}
-                      onDoubleClick={() => handleLaunch(game)}
-                    >
-                      <div style={{
-                        ...styles.cardThumb,
-                        background: isRunning ? '#0f2a1a' : '#1c2030',
-                      }}>
-                        <span style={{ fontSize: '28px' }}>🎮</span>
-                        {game.isFavorite && <span style={styles.favDot}>♥</span>}
-                        {isRunning && <span style={styles.runningDot}>●</span>}
-                      </div>
-                      <div style={styles.cardInfo}>
-                        <p style={styles.cardName}>{game.name}</p>
-                        <p style={styles.cardGenre}>{isRunning ? '● Rodando' : game.genre}</p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              {filtered.map((game, i) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  isSelected={selected === i}
+                  isRunning={runningGameId === game.id}
+                  onClick={() => {
+                    selectedRef.current = i
+                    setSelected(i)
+                    setDetailTab('info')
+                    loadPlaytime(Number(game.id))
+                    loadSessions(Number(game.id))
+                  }}
+                  onDoubleClick={() => handleLaunch(game)}
+                />
+              ))}
+            </div>
             )}
           </div>
 
@@ -504,6 +486,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     flex: 1,
     alignContent: 'start',
+    paddingTop: '6px',
+    paddingBottom: '6px',
   },
   card: {
     background: '#151820',
