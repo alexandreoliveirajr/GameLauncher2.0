@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 
 interface Props {
   onClose: () => void
@@ -12,6 +13,21 @@ export default function AddGameModal({ onClose, onAdded }: Props) {
   const [genre, setGenre] = useState('Geral')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  async function handleBrowse() {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'Executável', extensions: ['exe'] }],
+    })
+    if (selected) {
+      setExePath(selected as string)
+      if (!name) {
+        const parts = (selected as string).replace(/\\/g, '/').split('/')
+        const filename = parts[parts.length - 1].replace('.exe', '').replace('.EXE', '')
+        setName(filename)
+      }
+    }
+  }
 
   async function handleAdd() {
     if (!name.trim() || !exePath.trim()) {
@@ -50,13 +66,18 @@ export default function AddGameModal({ onClose, onAdded }: Props) {
         </div>
 
         <div style={styles.field}>
-          <label style={styles.label}>Caminho do executável</label>
-          <input
-            style={styles.input}
-            value={exePath}
-            onChange={e => setExePath(e.target.value)}
-            placeholder="C:\Games\witcher3\witcher3.exe"
-          />
+          <label style={styles.label}>Executável (.exe)</label>
+          <div style={styles.pathRow}>
+            <input
+              style={{ ...styles.input, flex: 1 }}
+              value={exePath}
+              onChange={e => setExePath(e.target.value)}
+              placeholder="Clique em Browse ou cole o caminho"
+            />
+            <button style={styles.browseBtn} onClick={handleBrowse}>
+              📁 Browse
+            </button>
+          </div>
         </div>
 
         <div style={styles.field}>
@@ -80,11 +101,9 @@ export default function AddGameModal({ onClose, onAdded }: Props) {
         {error && <p style={styles.error}>{error}</p>}
 
         <div style={styles.actions}>
-          <button style={styles.btnSecondary} onClick={onClose}>
-            Cancelar
-          </button>
+          <button style={styles.btnSecondary} onClick={onClose}>Cancelar</button>
           <button
-            style={styles.btnPrimary}
+            style={{ ...styles.btnPrimary, opacity: loading ? 0.6 : 1 }}
             onClick={handleAdd}
             disabled={loading}
           >
@@ -143,6 +162,11 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '1px',
     textTransform: 'uppercase',
   },
+  pathRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
   input: {
     width: '100%',
     background: '#1c2030',
@@ -153,6 +177,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#e8eaf0',
     outline: 'none',
     fontFamily: 'Segoe UI, sans-serif',
+  },
+  browseBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '9px 14px',
+    color: '#4f8ef7',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    whiteSpace: 'nowrap',
   },
   error: {
     color: '#ef4444',

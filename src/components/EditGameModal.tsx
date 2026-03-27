@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { Game } from '../types'
 
 interface Props {
@@ -15,6 +16,16 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  async function handleBrowse() {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'Executável', extensions: ['exe'] }],
+    })
+    if (selected) {
+      setExePath(selected as string)
+    }
+  }
+
   async function handleSave() {
     if (!name.trim() || !exePath.trim()) {
       setError('Nome e caminho são obrigatórios.')
@@ -22,12 +33,7 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
     }
     setLoading(true)
     try {
-      await invoke('update_game', {
-        gameId: game.id,
-        name,
-        exePath,
-        genre,
-      })
+      await invoke('update_game', { gameId: game.id, name, exePath, genre })
       onUpdated()
       onClose()
     } catch (e) {
@@ -56,12 +62,17 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
         </div>
 
         <div style={styles.field}>
-          <label style={styles.label}>Caminho do executável</label>
-          <input
-            style={styles.input}
-            value={exePath}
-            onChange={e => setExePath(e.target.value)}
-          />
+          <label style={styles.label}>Executável (.exe)</label>
+          <div style={styles.pathRow}>
+            <input
+              style={{ ...styles.input, flex: 1 }}
+              value={exePath}
+              onChange={e => setExePath(e.target.value)}
+            />
+            <button style={styles.browseBtn} onClick={handleBrowse}>
+              📁 Browse
+            </button>
+          </div>
         </div>
 
         <div style={styles.field}>
@@ -85,9 +96,7 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
         {error && <p style={styles.error}>{error}</p>}
 
         <div style={styles.actions}>
-          <button style={styles.btnSecondary} onClick={onClose}>
-            Cancelar
-          </button>
+          <button style={styles.btnSecondary} onClick={onClose}>Cancelar</button>
           <button
             style={{ ...styles.btnPrimary, opacity: loading ? 0.6 : 1 }}
             onClick={handleSave}
@@ -148,6 +157,11 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '1px',
     textTransform: 'uppercase',
   },
+  pathRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
   input: {
     width: '100%',
     background: '#1c2030',
@@ -158,6 +172,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#e8eaf0',
     outline: 'none',
     fontFamily: 'Segoe UI, sans-serif',
+  },
+  browseBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '9px 14px',
+    color: '#4f8ef7',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    whiteSpace: 'nowrap',
   },
   error: {
     color: '#ef4444',
