@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Home from './pages/Home'
 import Library from './pages/Library'
+import { SettingsProvider } from './store/SettingsContext'
 
 function BootScreen({ onFinish }: { onFinish: () => void }) {
   const [progress, setProgress] = useState(0)
@@ -40,7 +41,6 @@ function BootScreen({ onFinish }: { onFinish: () => void }) {
       }}>
         NEXUS
       </div>
-
       <div style={{
         ...styles.bootTagline,
         opacity: phase === 'loading' || phase === 'done' ? 1 : 0,
@@ -48,7 +48,6 @@ function BootScreen({ onFinish }: { onFinish: () => void }) {
       }}>
         GAME LAUNCHER
       </div>
-
       <div style={{
         ...styles.bootBarWrap,
         opacity: phase === 'loading' || phase === 'done' ? 1 : 0,
@@ -125,19 +124,21 @@ export default function App() {
   const [booting, setBooting] = useState(true)
 
   return (
-    <BrowserRouter>
-      {booting && <BootScreen onFinish={() => setBooting(false)} />}
-      <div style={{
-        opacity: booting ? 0 : 1,
-        transition: 'opacity 0.4s ease',
-        width: '100%',
-        height: '100%',
-      }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/library" element={<Library />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <SettingsProvider>
+      <BrowserRouter>
+        {booting && <BootScreen onFinish={() => setBooting(false)} />}
+        <div style={{
+          opacity: booting ? 0 : 1,
+          transition: 'opacity 0.4s ease',
+          width: '100%',
+          height: '100%',
+        }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/library" element={<Library />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </SettingsProvider>
   )
 }

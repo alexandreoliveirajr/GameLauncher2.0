@@ -7,6 +7,8 @@ import ScanFolderModal from '../components/ScanFolderModal'
 import EditGameModal from '../components/EditGameModal'
 import GlobalStatsModal from '../components/GlobalStatsModal'
 import GameCard from '../components/GameCard'
+import Settings from '../pages/Settings'
+import { useSettings } from '../store/SettingsContext'
 
 type Filter = 'all' | 'favorites' | string
 type DetailTab = 'info' | 'stats'
@@ -44,6 +46,14 @@ export default function Home() {
     if (filter === 'favorites') return g.isFavorite
     return g.genre === filter
   })
+
+  const { settings } = useSettings()
+  const [showSettings, setShowSettings] = useState(false)
+
+  useEffect(() => {
+    document.body.classList.remove('mode-controller', 'mode-desktop')
+    document.body.classList.add(`mode-${settings.inputMode}`)
+  }, [settings.inputMode])
 
   useEffect(() => { filteredRef.current = filtered }, [filtered])
   useEffect(() => { loadGames() }, [])
@@ -192,6 +202,9 @@ export default function Home() {
       {showStats && (
         <GlobalStatsModal onClose={() => setShowStats(false)} />
       )}
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
 
       {games.length === 0 ? (
         <div style={styles.center}>
@@ -232,6 +245,9 @@ export default function Home() {
               </div>
             ))}
             <div style={styles.sidebarFooter}>
+              <button style={styles.settingsBtn} onClick={() => setShowSettings(true)}>
+                ⚙ Config
+              </button>
               <button style={styles.statsBtn} onClick={() => setShowStats(true)}>
                 ◈ Stats
               </button>
@@ -718,6 +734,20 @@ const styles: Record<string, React.CSSProperties> = {
   statsBtn: {
     background: '#1c2030',
     border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '10px 16px',
+    color: '#6b7280',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    width: '100%',
+    textAlign: 'center' as const,
+  },
+
+  settingsBtn: {
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '6px',
     padding: '10px 16px',
     color: '#6b7280',

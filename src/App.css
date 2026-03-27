@@ -17,7 +17,14 @@ body {
   background: #0d0f14;
   color: #e8eaf0;
   font-family: 'Segoe UI', sans-serif;
+}
+
+body.mode-controller {
   cursor: none;
+}
+
+body.mode-desktop {
+  cursor: default;
 }
 
 #root {
@@ -26,14 +33,6 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-button {
-  cursor: pointer;
-}
-
-select, input {
-  cursor: text;
 }
 
 ::-webkit-scrollbar {

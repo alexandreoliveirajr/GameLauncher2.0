@@ -376,3 +376,53 @@ pub fn get_global_stats(app: tauri::AppHandle) -> Result<GlobalStats, String> {
         avg_session_seconds,
     })
 }
+
+#[tauri::command]
+pub fn get_setting(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
+    let conn = get_conn(&app)?;
+    let result = conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        [&key],
+        |row| row.get(0),
+    ).ok();
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn set_setting(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
+    let conn = get_conn(&app)?;
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = ?2",
+        (&key, &value),
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_window_mode(app: tauri::AppHandle, mode: String) -> Result<(), String> {
+    let window = app.get_webview_window("main")
+        .ok_or("Janela não encontrada")?;
+
+    match mode.as_str() {
+        "console" => {
+            window.set_decorations(false).map_err(|e| e.to_string())?;
+            window.set_resizable(false).map_err(|e| e.to_string())?;
+            window.set_fullscreen(true).map_err(|e| e.to_string())?;
+        }
+        "desktop_fullscreen" => {
+            window.set_decorations(false).map_err(|e| e.to_string())?;
+            window.set_resizable(false).map_err(|e| e.to_string())?;
+            window.set_fullscreen(true).map_err(|e| e.to_string())?;
+        }
+        "desktop" => {
+            window.set_fullscreen(false).map_err(|e| e.to_string())?;
+            window.set_decorations(true).map_err(|e| e.to_string())?;
+            window.set_resizable(true).map_err(|e| e.to_string())?;
+            window.center().map_err(|e| e.to_string())?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
