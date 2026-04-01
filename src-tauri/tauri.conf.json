@@ -13,9 +13,10 @@
     "windows": [
       {
         "title": "NEXUS Launcher",
-        "fullscreen": true,
+        "fullscreen": false,
         "decorations": false,
-        "resizable": false,
+        "resizable": true,
+        "maximized": true,
         "alwaysOnTop": false
       }
     ],

@@ -458,7 +458,7 @@ pub fn set_window_mode(app: tauri::AppHandle, mode: String) -> Result<(), String
             window.set_fullscreen(false).map_err(|e| e.to_string())?;
             window.set_decorations(true).map_err(|e| e.to_string())?;
             window.set_resizable(true).map_err(|e| e.to_string())?;
-            window.center().map_err(|e| e.to_string())?;
+            window.maximize().map_err(|e| e.to_string())?;
         }
         _ => {}
     }
