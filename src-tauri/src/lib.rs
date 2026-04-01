@@ -28,6 +28,9 @@ pub fn run() {
             commands::get_setting,
             commands::set_setting,
             commands::set_window_mode,
+            commands::shutdown_system,
+            commands::restart_system,
+            commands::exit_to_windows,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -27,10 +27,21 @@ pub fn start_gamepad_listener(app: tauri::AppHandle) {
                             Button::East          => Some("back"),
                             Button::North         => Some("favorite"),
                             Button::Start         => Some("menu"),
+                            Button::Select        => Some("select"),
                             Button::LeftTrigger2  => Some("trigger_left"),
                             Button::RightTrigger2 => Some("trigger_right"),
                             Button::LeftTrigger   => Some("bumper_left"),
                             Button::RightTrigger  => Some("bumper_right"),
+                            _ => None,
+                        };
+                        if let Some(action) = action {
+                            app.emit("gamepad_input", action).ok();
+                        }
+                    }
+                    EventType::ButtonReleased(button, _) => {
+                        let action = match button {
+                            Button::Start  => Some("menu_release"),
+                            Button::Select => Some("select_release"),
                             _ => None,
                         };
                         if let Some(action) = action {

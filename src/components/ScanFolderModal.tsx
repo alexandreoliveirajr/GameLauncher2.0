@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 
 interface ScannedGame {
   name: string
@@ -19,6 +20,17 @@ export default function ScanFolderModal({ onClose, onImported }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
   const [imported, setImported] = useState<number | null>(null)
+
+  async function handleBrowseFolder() {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Selecionar pasta de jogos',
+    })
+    if (selected) {
+      setPath(selected as string)
+    }
+  }
 
   async function handleScan() {
     if (!path.trim()) {
@@ -85,17 +97,24 @@ export default function ScanFolderModal({ onClose, onImported }: Props) {
             style={{ ...styles.input, flex: 1 }}
             value={path}
             onChange={e => setPath(e.target.value)}
-            placeholder="D:\Jogos"
+            placeholder="Clique em Browse ou cole o caminho"
             onKeyDown={e => e.key === 'Enter' && handleScan()}
           />
-          <button
-            style={styles.btnScan}
-            onClick={handleScan}
-            disabled={scanning}
-          >
-            {scanning ? 'Procurando...' : '⟳ Escanear'}
+          <button style={styles.browseBtn} onClick={handleBrowseFolder}>
+            📁 Browse
           </button>
         </div>
+
+        <button
+          style={{
+            ...styles.btnScan,
+            opacity: scanning ? 0.6 : 1,
+          }}
+          onClick={handleScan}
+          disabled={scanning}
+        >
+          {scanning ? '⟳ Procurando...' : '⟳ Escanear pasta'}
+        </button>
 
         {error && <p style={styles.error}>{error}</p>}
 
@@ -140,14 +159,19 @@ export default function ScanFolderModal({ onClose, onImported }: Props) {
         {imported !== null && (
           <p style={styles.success}>
             ✓ {imported} jogo{imported !== 1 ? 's' : ''} importado{imported !== 1 ? 's' : ''} com sucesso!
+            {scanned.length - imported > 0 && (
+              <span style={styles.skipped}>
+                {' '}({scanned.length - imported} já existiam na biblioteca)
+              </span>
+            )}
           </p>
         )}
 
-        {scanned.length > 0 && imported === null && (
-          <div style={styles.actions}>
-            <button style={styles.btnSecondary} onClick={onClose}>
-              Cancelar
-            </button>
+        <div style={styles.actions}>
+          <button style={styles.btnSecondary} onClick={onClose}>
+            {imported !== null ? 'Fechar' : 'Cancelar'}
+          </button>
+          {scanned.length > 0 && imported === null && (
             <button
               style={{
                 ...styles.btnPrimary,
@@ -158,16 +182,8 @@ export default function ScanFolderModal({ onClose, onImported }: Props) {
             >
               {importing ? 'Importando...' : `Importar ${selected.size} jogo${selected.size !== 1 ? 's' : ''}`}
             </button>
-          </div>
-        )}
-
-        {(scanned.length === 0 || imported !== null) && (
-          <div style={styles.actions}>
-            <button style={styles.btnSecondary} onClick={onClose}>
-              {imported !== null ? 'Fechar' : 'Cancelar'}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
@@ -192,7 +208,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxHeight: '80vh',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '14px',
   },
   header: {
     display: 'flex',
@@ -227,17 +243,29 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     fontFamily: 'Segoe UI, sans-serif',
   },
-  btnScan: {
+  browseBtn: {
     background: '#1c2030',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '6px',
-    padding: '9px 16px',
+    padding: '9px 14px',
+    color: '#4f8ef7',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    whiteSpace: 'nowrap',
+  },
+  btnScan: {
+    background: '#1c2030',
+    border: '1px solid rgba(79, 142, 247, 0.3)',
+    borderRadius: '6px',
+    padding: '10px',
     color: '#4f8ef7',
     fontSize: '13px',
     fontWeight: 600,
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
-    whiteSpace: 'nowrap',
+    width: '100%',
   },
   error: {
     color: '#ef4444',
@@ -246,6 +274,10 @@ const styles: Record<string, React.CSSProperties> = {
   success: {
     color: '#22c55e',
     fontSize: '13px',
+  },
+  skipped: {
+    color: '#6b7280',
+    fontSize: '12px',
   },
   resultsHeader: {
     display: 'flex',
@@ -267,7 +299,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   list: {
     overflowY: 'auto',
-    maxHeight: '300px',
+    maxHeight: '280px',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',

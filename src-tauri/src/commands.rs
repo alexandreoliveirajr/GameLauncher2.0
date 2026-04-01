@@ -157,10 +157,32 @@ fn scan_recursive(dir: &std::path::Path, found: &mut Vec<ScannedGame>, depth: u3
     if depth > 3 { return; }
 
     let ignore = vec![
-        "redist", "redistributable", "directx", "vcredist", "dotnet",
-        "setup", "install", "uninstall", "crash", "report", "update",
-        "launcher", "helper", "support", "prerequisites", "benchmark",
-        "_commonredist", "dx", "physx",
+        "python", "python3", "pythonw", "java", "javaw", "node", "ruby",
+        "perl", "php", "lua", "mono", "dotnet", "zsync", "zsyncmake",
+        "redist", "redistributable", "directx", "vcredist", "dotnetfx",
+        "setup", "install", "uninstall", "uninst", "unins",
+        "installer", "autorun", "bootstrap", "prerequisite",
+        "_commonredist", "dx", "physx", "dxsetup", "dxwebsetup",
+        "oalinst", "vc_redist", "windowsdesktop", "netfx",
+        "update", "updater", "patcher", "patch", "launcher_updater",
+        "crash", "crashpad", "crashreport", "crashhandler",
+        "report", "bugreport", "helper", "support",
+        "benchmark", "tool", "tools", "utility",
+        "easyanticheat", "battleye", "be_service", "anticheat",
+        "steam_api", "steamworks",
+        "upc", "uplay", "galaxyclient", "gog",
+        "epicgameslauncher", "bethesdanetlauncher",
+        "cefsharp", "crashpad_handler", "dxdiag",
+        "activation", "register", "elevate",
+        "7za", "7z", "winrar", "unzip", "arc",
+        "ffmpeg", "imagemagick", "convert",
+    ];
+
+    let ignore_dirs = vec![
+        "redist", "redistributable", "_commonredist", "directx",
+        "support", "tools", "tool", "helper", "helpers",
+        "dotnet", "vcredist", "prerequisites", "prerequisite",
+        "__pycache__", "node_modules", ".git",
     ];
 
     let entries = match std::fs::read_dir(dir) {
@@ -172,7 +194,15 @@ fn scan_recursive(dir: &std::path::Path, found: &mut Vec<ScannedGame>, depth: u3
         let path = entry.path();
 
         if path.is_dir() {
-            scan_recursive(&path, found, depth + 1);
+            let dir_name = path.file_name()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or("")
+                .to_lowercase();
+            let should_ignore_dir = ignore_dirs.iter().any(|i| dir_name.contains(i));
+            if !should_ignore_dir {
+                scan_recursive(&path, found, depth + 1);
+            }
         } else if path.is_file() {
             if let Some(ext) = path.extension() {
                 if ext.to_str().unwrap_or("").to_lowercase() == "exe" {
@@ -183,18 +213,23 @@ fn scan_recursive(dir: &std::path::Path, found: &mut Vec<ScannedGame>, depth: u3
                         .to_lowercase();
 
                     let should_ignore = ignore.iter().any(|i| exe_name.contains(i));
-                    if !should_ignore {
-                        let name = path.file_stem()
-                            .unwrap_or_default()
-                            .to_str()
-                            .unwrap_or("")
-                            .to_string();
+                    if should_ignore { continue; }
 
-                        found.push(ScannedGame {
-                            name: name.clone(),
-                            exe_path: path.to_str().unwrap_or("").to_string(),
-                        });
-                    }
+                    // ignora arquivos menores que 1MB (provavelmente helpers)
+                    let size = std::fs::metadata(&path)
+                        .map(|m| m.len())
+                        .unwrap_or(0);
+
+                    let name = path.file_stem()
+                        .unwrap_or_default()
+                        .to_str()
+                        .unwrap_or("")
+                        .to_string();
+
+                    found.push(ScannedGame {
+                        name: name.clone(),
+                        exe_path: path.to_str().unwrap_or("").to_string(),
+                    });
                 }
             }
         }
@@ -251,10 +286,14 @@ pub fn toggle_favorite(app: tauri::AppHandle, game_id: i64) -> Result<bool, Stri
 #[tauri::command]
 pub fn delete_game(app: tauri::AppHandle, game_id: i64) -> Result<(), String> {
     let conn = get_conn(&app)?;
-    conn.execute("DELETE FROM games WHERE id = ?1", [game_id])
-        .map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM sessions WHERE game_id = ?1", [game_id])
-        .map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM sessions WHERE game_id = ?1",
+        [game_id],
+    ).map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM games WHERE id = ?1",
+        [game_id],
+    ).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -424,5 +463,29 @@ pub fn set_window_mode(app: tauri::AppHandle, mode: String) -> Result<(), String
         _ => {}
     }
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn shutdown_system() -> Result<(), String> {
+    std::process::Command::new("shutdown")
+        .args(["/s", "/t", "0"])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn restart_system() -> Result<(), String> {
+    std::process::Command::new("shutdown")
+        .args(["/r", "/t", "0"])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn exit_to_windows(app: tauri::AppHandle) -> Result<(), String> {
+    app.exit(0);
     Ok(())
 }

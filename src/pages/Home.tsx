@@ -9,6 +9,7 @@ import GlobalStatsModal from '../components/GlobalStatsModal'
 import GameCard from '../components/GameCard'
 import Settings from '../pages/Settings'
 import { useSettings } from '../store/SettingsContext'
+import ExitMenu from '../components/ExitMenu'
 
 type Filter = 'all' | 'favorites' | string
 type DetailTab = 'info' | 'stats'
@@ -38,6 +39,11 @@ export default function Home() {
   const filteredRef = useRef<Game[]>([])
   const selectedRef = useRef(0)
   const runningPidRef = useRef<number | null>(null)
+  const [showExit, setShowExit] = useState(false)
+  const startHeldRef = useRef(false)
+  const selectHeldRef = useRef(false)
+  const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showExitRef = useRef(false)
 
   const genres = ['RPG', 'Ação', 'Estratégia', 'Aventura', 'FPS', 'Simulação', 'Indie', 'Geral']
 
@@ -59,9 +65,37 @@ export default function Home() {
   useEffect(() => { loadGames() }, [])
 
   useEffect(() => {
+    showExitRef.current = showExit
+  }, [showExit])
+
+  useEffect(() => {
     let unlisten: any
     listen('gamepad_input', (event: any) => {
       const action = event.payload
+
+      if (action === 'menu') {
+        startHeldRef.current = true
+        if (selectHeldRef.current) {
+          comboTimerRef.current = setTimeout(() => setShowExit(true), 2000)
+        }
+      }
+      if (action === 'menu_release') {
+        startHeldRef.current = false
+        if (comboTimerRef.current) clearTimeout(comboTimerRef.current)
+      }
+      if (action === 'select') {
+        selectHeldRef.current = true
+        if (startHeldRef.current) {
+          comboTimerRef.current = setTimeout(() => setShowExit(true), 2000)
+        }
+      }
+      if (action === 'select_release') {
+        selectHeldRef.current = false
+        if (comboTimerRef.current) clearTimeout(comboTimerRef.current)
+      }
+
+      if (showExit) return
+
       if (action === 'dpad_right' || action === 'dpad_down') {
         const next = Math.min(selectedRef.current + 1, filteredRef.current.length - 1)
         selectedRef.current = next
@@ -80,10 +114,23 @@ export default function Home() {
         const game = filteredRef.current[selectedRef.current]
         if (game) handleToggleFavorite(Number(game.id))
       }
-      if (action === 'back') { setShowAdd(false); setShowScan(false) }
-      if (action === 'menu') { setShowAdd(true) }
+      if (action === 'back') {
+        setShowAdd(false)
+        setShowScan(false)
+      }
+      if (action === 'menu' && !startHeldRef.current) {
+        setShowAdd(true)
+      }
     }).then((fn: any) => { unlisten = fn })
     return () => { if (unlisten) unlisten() }
+  }, [showExit])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setShowExit(true)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   async function loadGames() {
@@ -204,6 +251,10 @@ export default function Home() {
       )}
       {showSettings && (
         <Settings onClose={() => setShowSettings(false)} />
+      )}
+
+      {showExit && (
+        <ExitMenu onClose={() => setShowExit(false)} />
       )}
 
       {games.length === 0 ? (
