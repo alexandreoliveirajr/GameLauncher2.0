@@ -133,7 +133,7 @@ pub fn close_session(
         "UPDATE sessions
          SET ended_at = datetime('now'),
              duration_seconds = CAST(
-               (julianday('now') - julianday(started_at)) * 86400
+               strftime('%s', 'now') - strftime('%s', started_at)
              AS INTEGER)
          WHERE game_id = ?1
            AND ended_at IS NULL",
@@ -343,13 +343,13 @@ pub fn get_game_sessions(
     let conn = get_conn(&app)?;
     let mut stmt = conn.prepare(
         "SELECT
-            date(started_at) as day,
+            date(started_at, 'localtime') as day,
             COALESCE(SUM(duration_seconds), 0) as total_seconds,
             COUNT(*) as session_count
          FROM sessions
          WHERE game_id = ?1
            AND duration_seconds IS NOT NULL
-         GROUP BY date(started_at)
+         GROUP BY date(started_at, 'localtime')
          ORDER BY day DESC
          LIMIT 30"
     ).map_err(|e| e.to_string())?;

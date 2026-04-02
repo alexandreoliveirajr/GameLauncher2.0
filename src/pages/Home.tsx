@@ -46,7 +46,7 @@ export default function Home() {
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showExitRef = useRef(false)
 
-  const genres = ['RPG', 'Ação', 'Estratégia', 'Aventura', 'FPS', 'Simulação', 'Indie', 'Geral']
+  const genres = [...new Set(games.map(g => g.genre).filter(Boolean))].sort()
 
   const filtered = games.filter(g => {
     if (filter === 'all') return true
@@ -167,7 +167,10 @@ export default function Home() {
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '—'
-    const d = new Date(dateStr.replace(' ', 'T'))
+    const normalized = dateStr.length === 10
+      ? dateStr + 'T12:00:00'
+      : dateStr.replace(' ', 'T')
+    const d = new Date(normalized)
     if (isNaN(d.getTime())) return '—'
     return d.toLocaleDateString('pt-BR')
   }
@@ -347,7 +350,7 @@ export default function Home() {
               <div style={styles.detailThumb}>
                 {selectedGame.coverPath ? (
                   <img
-                    src={convertFileSrc(selectedGame.coverPath.replace(/\\/g, '/'))}
+                    src={convertFileSrc(selectedGame.coverPath.replace(/\\/g, '/')) + '?t=' + Date.now()}
                     alt={selectedGame.name}
                     style={{
                       width: '100%',

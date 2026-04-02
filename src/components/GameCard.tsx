@@ -54,7 +54,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
       }}>
         {hasCover ? (
           <img
-            src={convertFileSrc(game.coverPath?.replace(/\\/g, '/') ?? '')}
+            src={convertFileSrc(game.coverPath?.replace(/\\/g, '/') ?? '') + '?t=' + Date.now()}
             alt={game.name}
             style={{
               width: '100%',
