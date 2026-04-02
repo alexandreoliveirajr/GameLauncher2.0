@@ -23,7 +23,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
         borderRadius: '10px',
         overflow: 'hidden',
         cursor: 'pointer',
-        height: '200px',
+        height: '250px',
         flexShrink: 0,
         border: isSelected
           ? '2px solid #4f8ef7'
@@ -44,7 +44,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
       onMouseLeave={() => setHovered(false)}
     >
       <div style={{
-        height: '148px',
+        height: '190px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

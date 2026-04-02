@@ -568,7 +568,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
     gap: '16px',
     overflowY: 'auto',
     flex: 1,
@@ -622,7 +622,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '2px',
   },
   detail: {
-    width: '240px',
+    width: '280px',
     background: '#151820',
     borderLeft: '1px solid rgba(255,255,255,0.06)',
     display: 'flex',
@@ -631,13 +631,14 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
   },
   detailThumb: {
-    height: '140px',
-    background: '#1c2030',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-  },
+  height: '370px',
+  background: '#1c2030',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderBottom: '1px solid rgba(255,255,255,0.06)',
+  overflow: 'hidden',
+},
   tabRow: {
     display: 'flex',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -665,7 +666,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '10px',
   },
   detailName: {
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: 600,
     color: '#e8eaf0',
   },
