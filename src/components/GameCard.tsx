@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Game } from '../types'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 interface Props {
   game: Game
@@ -11,6 +12,9 @@ interface Props {
 
 export default function GameCard({ game, isSelected, isRunning, onClick, onDoubleClick }: Props) {
   const [hovered, setHovered] = useState(false)
+  const [imgError, setImgError] = useState(false)
+
+  const hasCover = game.coverPath && !imgError
 
   return (
     <div
@@ -19,7 +23,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
         borderRadius: '10px',
         overflow: 'hidden',
         cursor: 'pointer',
-        height: '148px',
+        height: '200px',
         flexShrink: 0,
         border: isSelected
           ? '2px solid #4f8ef7'
@@ -40,24 +44,36 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
       onMouseLeave={() => setHovered(false)}
     >
       <div style={{
-        height: '96px',
+        height: '148px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        background: isRunning
-          ? '#0f2a1a'
-          : hovered
-          ? '#232840'
-          : '#1c2030',
-        transition: 'background 0.15s ease',
+        background: isRunning ? '#0f2a1a' : '#1c2030',
+        overflow: 'hidden',
       }}>
-        <span style={{
-          fontSize: '28px',
-          transform: hovered ? 'scale(1.1)' : 'scale(1)',
-          transition: 'transform 0.15s ease',
-          display: 'block',
-        }}>🎮</span>
+        {hasCover ? (
+          <img
+            src={convertFileSrc(game.coverPath?.replace(/\\/g, '/') ?? '')}
+            alt={game.name}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              transform: hovered ? 'scale(1.04)' : 'scale(1)',
+              transition: 'transform 0.2s ease',
+            }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span style={{
+            fontSize: '36px',
+            transform: hovered ? 'scale(1.1)' : 'scale(1)',
+            transition: 'transform 0.15s ease',
+            display: 'block',
+          }}>🎮</span>
+        )}
 
         {game.isFavorite && (
           <span style={{
@@ -65,9 +81,11 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
             top: '6px',
             left: '8px',
             color: '#f59e0b',
-            fontSize: '10px',
+            fontSize: '12px',
+            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
           }}>♥</span>
         )}
+
         {isRunning && (
           <span style={{
             position: 'absolute',
@@ -82,17 +100,17 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(79, 142, 247, 0.06)',
+            background: 'rgba(0,0,0,0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
             <span style={{
               fontSize: '11px',
-              color: 'rgba(79, 142, 247, 0.8)',
-              letterSpacing: '2px',
+              color: 'rgba(255,255,255,0.9)',
+              letterSpacing: '3px',
               fontFamily: 'Segoe UI, sans-serif',
-              marginTop: '32px',
+              fontWeight: 700,
             }}>
               JOGAR
             </span>
@@ -103,7 +121,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
       <div style={{ padding: '8px 10px' }}>
         <p style={{
           fontSize: '12px',
-          fontWeight: 500,
+          fontWeight: 600,
           color: hovered ? '#ffffff' : '#e8eaf0',
           whiteSpace: 'nowrap',
           overflow: 'hidden',

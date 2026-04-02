@@ -1,6 +1,7 @@
 mod db;
 mod commands;
 mod gamepad;
+mod igdb;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +32,9 @@ pub fn run() {
             commands::shutdown_system,
             commands::restart_system,
             commands::exit_to_windows,
+            commands::search_igdb,
+            commands::fetch_igdb_cover,
+            commands::search_igdb_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

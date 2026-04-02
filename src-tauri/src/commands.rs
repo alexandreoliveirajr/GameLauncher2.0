@@ -1,6 +1,7 @@
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use crate::igdb::GameMetadata;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -10,6 +11,7 @@ pub struct Game {
     pub exe_path: String,
     pub genre: String,
     pub cover_path: Option<String>,
+    pub description: Option<String>,
     pub added_at: String,
     pub is_favorite: bool,
     pub last_played_at: Option<String>,
@@ -41,7 +43,7 @@ pub fn add_game(
 pub fn list_games(app: tauri::AppHandle) -> Result<Vec<Game>, String> {
     let conn = get_conn(&app)?;
     let mut stmt = conn.prepare(
-        "SELECT id, name, exe_path, genre, cover_path, added_at, is_favorite, last_played_at FROM games ORDER BY name ASC"
+        "SELECT id, name, exe_path, genre, cover_path, description, added_at, is_favorite, last_played_at FROM games ORDER BY name ASC"
     ).map_err(|e| e.to_string())?;
 
     let games = stmt.query_map([], |row| {
@@ -51,9 +53,10 @@ pub fn list_games(app: tauri::AppHandle) -> Result<Vec<Game>, String> {
             exe_path: row.get(2)?,
             genre: row.get(3)?,
             cover_path: row.get(4)?,
-            added_at: row.get(5)?,
-            is_favorite: row.get::<_, i32>(6)? == 1,
-            last_played_at: row.get(7)?,
+            description: row.get(5)?,
+            added_at: row.get(6)?,
+            is_favorite: row.get::<_, i32>(7)? == 1,
+            last_played_at: row.get(8)?,
         })
     }).map_err(|e| e.to_string())?
     .filter_map(|g| g.ok())
@@ -488,4 +491,64 @@ pub fn restart_system() -> Result<(), String> {
 pub fn exit_to_windows(app: tauri::AppHandle) -> Result<(), String> {
     app.exit(0);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn search_igdb(name: String) -> Result<Option<GameMetadata>, String> {
+    crate::igdb::search_game(&name).await
+}
+
+#[tauri::command]
+pub async fn fetch_igdb_cover(
+    app: tauri::AppHandle,
+    game_id: i64,
+    game_name: String,
+) -> Result<Option<String>, String> {
+    let metadata = crate::igdb::search_game(&game_name).await?;
+
+    let Some(meta) = metadata else {
+        return Ok(None);
+    };
+
+    let conn = get_conn(&app)?;
+
+    if let Some(summary) = &meta.summary {
+        conn.execute(
+            "UPDATE games SET description = ?1 WHERE id = ?2",
+            (summary, &game_id),
+        ).map_err(|e| e.to_string())?;
+    }
+
+    if let Some(genre) = &meta.genre {
+        conn.execute(
+            "UPDATE games SET genre = ?1 WHERE id = ?2",
+            (genre, &game_id),
+        ).map_err(|e| e.to_string())?;
+    }
+
+    let Some(cover_url) = meta.cover_url else {
+        return Ok(None);
+    };
+
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let covers_dir = app_dir.join("covers");
+    std::fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
+
+    let cover_path = covers_dir.join(format!("{}.jpg", game_id));
+    let response = reqwest::get(&cover_url).await.map_err(|e| e.to_string())?;
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    std::fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
+
+    let path_str = cover_path.to_str().unwrap_or("").to_string();
+    conn.execute(
+        "UPDATE games SET cover_path = ?1 WHERE id = ?2",
+        (&path_str, &game_id),
+    ).map_err(|e| e.to_string())?;
+
+    Ok(Some(path_str))
+}
+
+#[tauri::command]
+pub async fn search_igdb_preview(name: String) -> Result<Option<crate::igdb::GameMetadata>, String> {
+    crate::igdb::search_game(&name).await
 }

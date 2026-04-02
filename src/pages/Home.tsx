@@ -10,6 +10,7 @@ import GameCard from '../components/GameCard'
 import Settings from '../pages/Settings'
 import { useSettings } from '../store/SettingsContext'
 import ExitMenu from '../components/ExitMenu'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 type Filter = 'all' | 'favorites' | string
 type DetailTab = 'info' | 'stats'
@@ -344,7 +345,23 @@ export default function Home() {
           {selectedGame && (
             <div style={styles.detail}>
               <div style={styles.detailThumb}>
-                <span style={{ fontSize: '56px' }}>🎮</span>
+                {selectedGame.coverPath ? (
+                  <img
+                    src={convertFileSrc(selectedGame.coverPath.replace(/\\/g, '/'))}
+                    alt={selectedGame.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '56px' }}>🎮</span>
+                )}
               </div>
 
               <div style={styles.tabRow}>
@@ -366,6 +383,9 @@ export default function Home() {
                 <div style={styles.detailBody}>
                   <p style={styles.detailName}>{selectedGame.name}</p>
                   <p style={styles.detailGenre}>{selectedGame.genre}</p>
+                  {selectedGame.description && (
+                    <p style={styles.detailDesc}>{selectedGame.description}</p>
+                  )}
                   <div style={styles.statRow}>
                     <div style={styles.statBox}>
                       <p style={styles.statLabel}>Tempo total</p>
@@ -548,8 +568,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-    gap: '14px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+    gap: '16px',
     overflowY: 'auto',
     flex: 1,
     alignContent: 'start',
@@ -808,5 +828,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Segoe UI, sans-serif',
     width: '100%',
     textAlign: 'center' as const,
+  },
+
+  detailDesc: {
+    fontSize: '11px',
+    color: '#6b7280',
+    lineHeight: '1.6',
+    borderTop: '1px solid rgba(255,255,255,0.06)',
+    paddingTop: '10px',
   },
 }

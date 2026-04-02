@@ -4,6 +4,7 @@ export interface Game {
   exePath: string
   genre: string
   coverPath: string | null
+  description: string | null
   addedAt: string
   isFavorite: boolean
   lastPlayedAt: string | null

@@ -1,0 +1,11 @@
+corrigir modo tela cheia, com rasgo na região da taskbar.
+
+corrigir menu de desligamento no controle. não está navegando entre as opções.
+
+corrigir navegabilidade pelo controle na biblioteca.
+
+corrigir visual do modo console.
+
+adicionar identificação de controle automática, fazendo com que o software detecte atividade do controle e pergunte se quer trocar o modo de desktop para console.
+
+IGDB SECRET: jdmym30bezpg946w202n9gj80puy9t

@@ -11,13 +11,14 @@ pub fn init(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     conn.execute_batch("
         CREATE TABLE IF NOT EXISTS games (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            name          TEXT NOT NULL,
-            exe_path      TEXT NOT NULL,
-            genre         TEXT NOT NULL DEFAULT 'Geral',
-            cover_path    TEXT,
-            added_at      TEXT NOT NULL DEFAULT (datetime('now')),
-            is_favorite   INTEGER NOT NULL DEFAULT 0,
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            name           TEXT NOT NULL,
+            exe_path       TEXT NOT NULL,
+            genre          TEXT NOT NULL DEFAULT 'Geral',
+            cover_path     TEXT,
+            description    TEXT,
+            added_at       TEXT NOT NULL DEFAULT (datetime('now')),
+            is_favorite    INTEGER NOT NULL DEFAULT 0,
             last_played_at TEXT
         );
 
@@ -41,6 +42,11 @@ pub fn init(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             last_scanned_at TEXT
         );
     ")?;
+
+    let _ = conn.execute(
+        "ALTER TABLE games ADD COLUMN description TEXT",
+        [],
+    );
 
     println!("Banco inicializado em: {:?}", db_path);
     Ok(())

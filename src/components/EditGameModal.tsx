@@ -3,6 +3,13 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Game } from '../types'
 
+interface IGDBPreview {
+  name: string
+  summary: string | null
+  genre: string | null
+  coverUrl: string | null
+}
+
 interface Props {
   game: Game
   onClose: () => void
@@ -15,14 +22,46 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
   const [genre, setGenre] = useState(game.genre)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [preview, setPreview] = useState<IGDBPreview | null>(null)
+  const [fetchingCover, setFetchingCover] = useState(false)
+  const [coverFetched, setCoverFetched] = useState(false)
 
   async function handleBrowse() {
     const selected = await open({
       multiple: false,
       filters: [{ name: 'Executável', extensions: ['exe'] }],
     })
-    if (selected) {
-      setExePath(selected as string)
+    if (selected) setExePath(selected as string)
+  }
+
+  async function handleSearchIGDB() {
+    if (!name.trim()) return
+    setSearching(true)
+    setPreview(null)
+    setCoverFetched(false)
+    try {
+      const result = await invoke<IGDBPreview | null>('search_igdb_preview', { name })
+      console.log('IGDB result:', JSON.stringify(result))
+      setPreview(result)
+      if (result?.genre) setGenre(result.genre)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  async function handleFetchCover() {
+    if (!preview?.coverUrl) return
+    setFetchingCover(true)
+    try {
+      await invoke('fetch_igdb_cover', { gameId: game.id, gameName: name })
+      setCoverFetched(true)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setFetchingCover(false)
     }
   }
 
@@ -53,13 +92,61 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
 
         <div style={styles.field}>
           <label style={styles.label}>Nome do jogo</label>
-          <input
-            style={styles.input}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            autoFocus
-          />
+          <div style={styles.pathRow}>
+            <input
+              style={{ ...styles.input, flex: 1 }}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              autoFocus
+            />
+            <button
+              style={styles.igdbBtn}
+              onClick={handleSearchIGDB}
+              disabled={searching}
+            >
+              {searching ? '...' : '🔍 IGDB'}
+            </button>
+          </div>
         </div>
+
+        {preview && (
+          <div style={styles.previewBox}>
+            <div style={styles.previewLeft}>
+              {preview.coverUrl ? (
+                <img
+                  src={preview.coverUrl}
+                  alt={preview.name}
+                  style={styles.previewImg}
+                />
+              ) : (
+                <div style={styles.previewImgPlaceholder}>🎮</div>
+              )}
+            </div>
+            <div style={styles.previewInfo}>
+              <p style={styles.previewName}>{preview.name}</p>
+              {preview.genre && (
+                <p style={styles.previewGenre}>{preview.genre}</p>
+              )}
+              {preview.summary && (
+                <p style={styles.previewSummary}>
+                  {preview.summary.slice(0, 100)}...
+                </p>
+              )}
+              {preview.coverUrl && !coverFetched && (
+                <button
+                  style={styles.fetchCoverBtn}
+                  onClick={handleFetchCover}
+                  disabled={fetchingCover}
+                >
+                  {fetchingCover ? 'Salvando...' : '⬇ Usar esta capa'}
+                </button>
+              )}
+              {coverFetched && (
+                <p style={styles.coverSuccess}>✓ Capa salva!</p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div style={styles.field}>
           <label style={styles.label}>Executável (.exe)</label>
@@ -125,13 +212,17 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '12px',
     padding: '28px',
-    width: '420px',
+    width: '460px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '24px',
   },
   title: {
     fontSize: '16px',
@@ -147,13 +238,13 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   field: {
-    marginBottom: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
   },
   label: {
-    display: 'block',
     fontSize: '11px',
     color: '#6b7280',
-    marginBottom: '6px',
     letterSpacing: '1px',
     textTransform: 'uppercase',
   },
@@ -173,6 +264,18 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     fontFamily: 'Segoe UI, sans-serif',
   },
+  igdbBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(79,142,247,0.3)',
+    borderRadius: '6px',
+    padding: '9px 12px',
+    color: '#4f8ef7',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    whiteSpace: 'nowrap',
+  },
   browseBtn: {
     background: '#1c2030',
     border: '1px solid rgba(255,255,255,0.08)',
@@ -185,16 +288,81 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Segoe UI, sans-serif',
     whiteSpace: 'nowrap',
   },
+  previewBox: {
+    display: 'flex',
+    gap: '12px',
+    background: '#1c2030',
+    borderRadius: '8px',
+    padding: '12px',
+    border: '1px solid rgba(79,142,247,0.2)',
+  },
+  previewLeft: {
+    flexShrink: 0,
+  },
+  previewImg: {
+    width: '70px',
+    height: '94px',
+    objectFit: 'cover',
+    borderRadius: '5px',
+  },
+  previewImgPlaceholder: {
+    width: '70px',
+    height: '94px',
+    background: '#232840',
+    borderRadius: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '28px',
+  },
+  previewInfo: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  previewName: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#e8eaf0',
+  },
+  previewGenre: {
+    fontSize: '11px',
+    color: '#4f8ef7',
+  },
+  previewSummary: {
+    fontSize: '11px',
+    color: '#6b7280',
+    lineHeight: '1.5',
+    flex: 1,
+  },
+  fetchCoverBtn: {
+    background: '#4f8ef7',
+    border: 'none',
+    borderRadius: '5px',
+    padding: '6px 10px',
+    color: '#fff',
+    fontSize: '11px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    alignSelf: 'flex-start',
+    marginTop: 'auto',
+  },
+  coverSuccess: {
+    color: '#22c55e',
+    fontSize: '11px',
+    marginTop: 'auto',
+  },
   error: {
     color: '#ef4444',
     fontSize: '12px',
-    marginBottom: '12px',
   },
   actions: {
     display: 'flex',
     gap: '10px',
-    marginTop: '24px',
     justifyContent: 'flex-end',
+    marginTop: '4px',
   },
   btnSecondary: {
     background: '#1c2030',
