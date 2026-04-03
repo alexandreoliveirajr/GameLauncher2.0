@@ -47,11 +47,13 @@ export default function Home() {
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showExitRef = useRef(false)
   const [sortBy, setSortBy] = useState<'name' | 'playtime' | 'recent'>('name')
+  const [search, setSearch] = useState('')
 
   const genres = [...new Set(games.map(g => g.genre).filter(Boolean))].sort()
 
   const filtered = games
     .filter(g => {
+      if (search) return g.name.toLowerCase().includes(search.toLowerCase())
       if (filter === 'all') return true
       if (filter === 'favorites') return g.isFavorite
       return g.genre === filter
@@ -347,6 +349,27 @@ export default function Home() {
                 ● {games.find(g => g.id === runningGameId)?.name} em execução
               </div>
             )}
+            <div style={styles.searchRow}>
+              <input
+                style={styles.searchInput}
+                value={search}
+                onChange={e => {
+                  setSearch(e.target.value)
+                  setSelected(0)
+                  selectedRef.current = 0
+                }}
+                placeholder="🔍  Buscar jogos..."
+              />
+              {search && (
+                <button style={styles.searchClear} onClick={() => {
+                  setSearch('')
+                  setSelected(0)
+                  selectedRef.current = 0
+                }}>
+                  ✕
+                </button>
+              )}
+            </div>
             <div style={styles.sortRow}>
               <span style={styles.sortLabel}>Ordenar por</span>
               <div style={styles.sortBtns}>
@@ -925,5 +948,32 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(79, 142, 247, 0.12)',
     borderColor: 'rgba(79, 142, 247, 0.3)',
     color: '#4f8ef7',
+  },
+
+  searchRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+    position: 'relative' as const,
+  },
+  searchInput: {
+    flex: 1,
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '8px',
+    padding: '9px 16px',
+    fontSize: '13px',
+    color: '#e8eaf0',
+    outline: 'none',
+    fontFamily: 'Segoe UI, sans-serif',
+  },
+  searchClear: {
+    background: 'none',
+    border: 'none',
+    color: '#6b7280',
+    fontSize: '14px',
+    cursor: 'pointer',
+    padding: '4px 8px',
   },
 }
