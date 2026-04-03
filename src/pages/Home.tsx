@@ -35,6 +35,7 @@ export default function Home() {
   const [runningPid, setRunningPid] = useState<number | null>(null)
   const [runningGameId, setRunningGameId] = useState<number | null>(null)
   const [playtime, setPlaytime] = useState<number>(0)
+  const [playtimeMap, setPlaytimeMap] = useState<Record<number, number>>({})
   const monitorRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const gamesRef = useRef<Game[]>([])
   const filteredRef = useRef<Game[]>([])
@@ -45,14 +46,30 @@ export default function Home() {
   const selectHeldRef = useRef(false)
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showExitRef = useRef(false)
+  const [sortBy, setSortBy] = useState<'name' | 'playtime' | 'recent'>('name')
 
   const genres = [...new Set(games.map(g => g.genre).filter(Boolean))].sort()
 
-  const filtered = games.filter(g => {
-    if (filter === 'all') return true
-    if (filter === 'favorites') return g.isFavorite
-    return g.genre === filter
-  })
+  const filtered = games
+    .filter(g => {
+      if (filter === 'all') return true
+      if (filter === 'favorites') return g.isFavorite
+      return g.genre === filter
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      if (sortBy === 'recent') {
+        const dateA = a.lastPlayedAt ?? a.addedAt
+        const dateB = b.lastPlayedAt ?? b.addedAt
+        return dateB.localeCompare(dateA)
+      }
+      if (sortBy === 'playtime') {
+        const pa = playtimeMap[Number(a.id)] ?? 0
+        const pb = playtimeMap[Number(b.id)] ?? 0
+        return pb - pa
+      }
+      return 0
+    })
 
   const { settings } = useSettings()
   const [showSettings, setShowSettings] = useState(false)
@@ -68,6 +85,18 @@ export default function Home() {
   useEffect(() => {
     showExitRef.current = showExit
   }, [showExit])
+
+  useEffect(() => {
+    async function loadAllPlaytimes() {
+      const map: Record<number, number> = {}
+      for (const game of games) {
+        const seconds = await invoke<number>('get_game_playtime', { gameId: game.id })
+        map[Number(game.id)] = seconds
+      }
+      setPlaytimeMap(map)
+    }
+    if (games.length > 0) loadAllPlaytimes()
+  }, [games])
 
   useEffect(() => {
     let unlisten: any
@@ -318,6 +347,29 @@ export default function Home() {
                 ● {games.find(g => g.id === runningGameId)?.name} em execução
               </div>
             )}
+            <div style={styles.sortRow}>
+              <span style={styles.sortLabel}>Ordenar por</span>
+              <div style={styles.sortBtns}>
+                <button
+                  style={{ ...styles.sortBtn, ...(sortBy === 'name' ? styles.sortBtnActive : {}) }}
+                  onClick={() => setSortBy('name')}
+                >
+                  A — Z
+                </button>
+                <button
+                  style={{ ...styles.sortBtn, ...(sortBy === 'recent' ? styles.sortBtnActive : {}) }}
+                  onClick={() => setSortBy('recent')}
+                >
+                  Recentes
+                </button>
+                <button
+                  style={{ ...styles.sortBtn, ...(sortBy === 'playtime' ? styles.sortBtnActive : {}) }}
+                  onClick={() => setSortBy('playtime')}
+                >
+                  Mais jogados
+                </button>
+              </div>
+            </div>
             {filtered.length === 0 ? (
               <div style={styles.center}>
                 <p style={styles.muted}>Nenhum jogo nessa categoria.</p>
@@ -840,5 +892,38 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: '1.6',
     borderTop: '1px solid rgba(255,255,255,0.06)',
     paddingTop: '10px',
+  },
+
+  sortRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  sortLabel: {
+    fontSize: '11px',
+    color: '#4b5563',
+    letterSpacing: '1px',
+    textTransform: 'uppercase' as const,
+  },
+  sortBtns: {
+    display: 'flex',
+    gap: '6px',
+  },
+  sortBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '5px',
+    padding: '5px 12px',
+    color: '#6b7280',
+    fontSize: '11px',
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+    transition: 'all 0.15s',
+  },
+  sortBtnActive: {
+    background: 'rgba(79, 142, 247, 0.12)',
+    borderColor: 'rgba(79, 142, 247, 0.3)',
+    color: '#4f8ef7',
   },
 }

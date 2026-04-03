@@ -26,6 +26,7 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
   const [preview, setPreview] = useState<IGDBPreview | null>(null)
   const [fetchingCover, setFetchingCover] = useState(false)
   const [coverFetched, setCoverFetched] = useState(false)
+  const [offset, setOffset] = useState(0)
 
   async function handleBrowse() {
     const selected = await open({
@@ -35,15 +36,15 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
     if (selected) setExePath(selected as string)
   }
 
-  async function handleSearchIGDB() {
+  async function handleSearchIGDB(newOffset = 0) {
     if (!name.trim()) return
     setSearching(true)
     setPreview(null)
     setCoverFetched(false)
     try {
-      const result = await invoke<IGDBPreview | null>('search_igdb_preview', { name })
-      console.log('IGDB result:', JSON.stringify(result))
+      const result = await invoke<IGDBPreview | null>('search_igdb_preview', { name, offset: newOffset })
       setPreview(result)
+      setOffset(newOffset)
       if (result?.genre) setGenre(result.genre)
     } catch (e) {
       console.error(e)
@@ -53,10 +54,16 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
   }
 
   async function handleFetchCover() {
-    if (!preview?.coverUrl) return
+    if (!preview) return
     setFetchingCover(true)
     try {
-      await invoke('fetch_igdb_cover', { gameId: game.id, gameName: name })
+      await invoke('save_igdb_data', {
+        gameId: game.id,
+        coverUrl: preview.coverUrl,
+        summary: preview.summary,
+        genre: preview.genre,
+      })
+      if (preview.genre) setGenre(preview.genre)
       setCoverFetched(true)
     } catch (e) {
       console.error(e)
@@ -101,7 +108,7 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
             />
             <button
               style={styles.igdbBtn}
-              onClick={handleSearchIGDB}
+              onClick={() => handleSearchIGDB(0)}
               disabled={searching}
             >
               {searching ? '...' : '🔍 IGDB'}
@@ -141,9 +148,14 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
                   {fetchingCover ? 'Salvando...' : '⬇ Usar esta capa'}
                 </button>
               )}
-              {coverFetched && (
-                <p style={styles.coverSuccess}>✓ Capa salva!</p>
-              )}
+              <button
+                style={styles.nextBtn}
+                onClick={() => handleSearchIGDB(offset + 1)}
+                disabled={searching}
+              >
+                {searching ? '...' : 'Próximo ›'}
+              </button>
+              
             </div>
           </div>
         )}
@@ -382,6 +394,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fff',
     fontSize: '13px',
     fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+  },
+
+  nextBtn: {
+    background: '#1c2030',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '5px',
+    padding: '6px 10px',
+    color: '#6b7280',
+    fontSize: '11px',
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
   },

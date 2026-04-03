@@ -35,6 +35,7 @@ pub fn run() {
             commands::search_igdb,
             commands::fetch_igdb_cover,
             commands::search_igdb_preview,
+            commands::save_igdb_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

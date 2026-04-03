@@ -68,13 +68,14 @@ async fn get_token() -> Result<String, String> {
     Ok(token)
 }
 
-pub async fn search_game(name: &str) -> Result<Option<GameMetadata>, String> {
+pub async fn search_game(name: &str, offset: u32) -> Result<Option<GameMetadata>, String> {
     let token = get_token().await?;
     let client = reqwest::Client::new();
 
     let body = format!(
-        "search \"{}\"; fields name,summary,genres.name,cover.image_id; limit 1;",
-        name.replace('"', "")
+        "search \"{}\"; fields name,summary,genres.name,cover.image_id; limit 1; offset {};",
+        name.replace('"', ""),
+        offset
     );
 
     let resp = client
