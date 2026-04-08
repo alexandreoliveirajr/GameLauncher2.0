@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Home from './pages/Home'
 import Library from './pages/Library'
-import { SettingsProvider } from './store/SettingsContext'
+import ConsoleHome from './pages/ConsoleHome'
+import { SettingsProvider, useSettings } from './store/SettingsContext'
 
 function BootScreen({ onFinish }: { onFinish: () => void }) {
   const [progress, setProgress] = useState(0)
@@ -66,46 +67,54 @@ function BootScreen({ onFinish }: { onFinish: () => void }) {
   )
 }
 
+function AppContent() {
+  const [booting, setBooting] = useState(true)
+  const { settings } = useSettings()
+
+  return (
+    <>
+      {booting && <BootScreen onFinish={() => setBooting(false)} />}
+      <div style={{
+        opacity: booting ? 0 : 1,
+        transition: 'opacity 0.4s ease',
+        width: '100%',
+        height: '100%',
+      }}>
+        <Routes>
+          <Route path="/" element={
+            settings.inputMode === 'controller'
+              ? <ConsoleHome />
+              : <Home />
+          } />
+          <Route path="/library" element={<Library />} />
+        </Routes>
+      </div>
+    </>
+  )
+}
+
 const styles: Record<string, React.CSSProperties> = {
   boot: {
-    position: 'fixed',
-    inset: 0,
-    background: '#0d0f14',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    gap: '12px',
+    position: 'fixed', inset: 0, background: '#0d0f14',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 9999, gap: '12px',
   },
   bootLogo: {
-    fontSize: '80px',
-    fontWeight: 800,
-    color: '#4f8ef7',
-    letterSpacing: '16px',
-    fontFamily: 'Segoe UI, sans-serif',
+    fontSize: '80px', fontWeight: 800, color: '#4f8ef7',
+    letterSpacing: '16px', fontFamily: 'Segoe UI, sans-serif',
   },
   bootTagline: {
-    fontSize: '13px',
-    color: '#4b5563',
-    letterSpacing: '6px',
-    fontFamily: 'Segoe UI, sans-serif',
-    marginTop: '-8px',
+    fontSize: '13px', color: '#4b5563', letterSpacing: '6px',
+    fontFamily: 'Segoe UI, sans-serif', marginTop: '-8px',
   },
   bootBarWrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '10px',
-    marginTop: '48px',
-    width: '280px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    gap: '10px', marginTop: '48px', width: '280px',
   },
   bootBarTrack: {
-    width: '100%',
-    height: '2px',
-    background: 'rgba(255,255,255,0.06)',
-    borderRadius: '2px',
-    overflow: 'hidden',
+    width: '100%', height: '2px',
+    background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden',
   },
   bootBarFill: {
     height: '100%',
@@ -113,31 +122,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '2px',
   },
   bootBarLabel: {
-    fontSize: '11px',
-    color: '#4b5563',
-    letterSpacing: '2px',
-    fontFamily: 'Segoe UI, sans-serif',
+    fontSize: '11px', color: '#4b5563',
+    letterSpacing: '2px', fontFamily: 'Segoe UI, sans-serif',
   },
 }
 
 export default function App() {
-  const [booting, setBooting] = useState(true)
-
   return (
     <SettingsProvider>
       <BrowserRouter>
-        {booting && <BootScreen onFinish={() => setBooting(false)} />}
-        <div style={{
-          opacity: booting ? 0 : 1,
-          transition: 'opacity 0.4s ease',
-          width: '100%',
-          height: '100%',
-        }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/library" element={<Library />} />
-          </Routes>
-        </div>
+        <AppContent />
       </BrowserRouter>
     </SettingsProvider>
   )

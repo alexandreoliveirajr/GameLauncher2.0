@@ -59,12 +59,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   async function applyWindowMode(inputMode: InputMode, windowMode: WindowMode) {
     if (inputMode === 'controller') {
       await invoke('set_window_mode', { mode: 'console' })
-    } else if (windowMode === 'fullscreen') {
-      await invoke('set_window_mode', { mode: 'desktop_fullscreen' })
     } else {
       await invoke('set_window_mode', { mode: 'desktop' })
     }
-  }
+}
 
   async function setInputMode(mode: InputMode) {
     await invoke('set_setting', { key: 'input_mode', value: mode })

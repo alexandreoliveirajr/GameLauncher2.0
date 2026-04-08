@@ -24,7 +24,7 @@ interface SessionInfo {
 export default function Home() {
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState(0)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showScan, setShowScan] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -39,7 +39,7 @@ export default function Home() {
   const monitorRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const gamesRef = useRef<Game[]>([])
   const filteredRef = useRef<Game[]>([])
-  const selectedRef = useRef(0)
+  const selectedIdRef = useRef<number | null>(null)
   const runningPidRef = useRef<number | null>(null)
   const [showExit, setShowExit] = useState(false)
   const startHeldRef = useRef(false)
@@ -129,23 +129,38 @@ export default function Home() {
       if (showExit) return
 
       if (action === 'dpad_right' || action === 'dpad_down') {
-        const next = Math.min(selectedRef.current + 1, filteredRef.current.length - 1)
-        selectedRef.current = next
-        setSelected(next)
-      }
-      if (action === 'dpad_left' || action === 'dpad_up') {
-        const prev = Math.max(selectedRef.current - 1, 0)
-        selectedRef.current = prev
-        setSelected(prev)
-      }
-      if (action === 'confirm') {
-        const game = filteredRef.current[selectedRef.current]
-        if (game && !runningPidRef.current) launchGame(game)
-      }
-      if (action === 'favorite') {
-        const game = filteredRef.current[selectedRef.current]
-        if (game) handleToggleFavorite(Number(game.id))
-      }
+  const currentIndex = selectedId !== null
+    ? filteredRef.current.findIndex(g => g.id === selectedIdRef.current)
+    : -1
+  const next = Math.min(currentIndex + 1, filteredRef.current.length - 1)
+  const nextGame = filteredRef.current[next]
+  if (nextGame) {
+    selectedIdRef.current = Number(nextGame.id)
+    setSelectedId(Number(nextGame.id))
+  }
+}
+
+if (action === 'dpad_left' || action === 'dpad_up') {
+  const currentIndex = selectedId !== null
+    ? filteredRef.current.findIndex(g => g.id === selectedIdRef.current)
+    : 0
+  const prev = Math.max(currentIndex - 1, 0)
+  const prevGame = filteredRef.current[prev]
+  if (prevGame) {
+    selectedIdRef.current = Number(prevGame.id)
+    setSelectedId(Number(prevGame.id))
+  }
+}
+
+if (action === 'confirm') {
+  const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
+  if (game && !runningPidRef.current) launchGame(game)
+}
+
+if (action === 'favorite') {
+  const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
+  if (game) handleToggleFavorite(Number(game.id))
+}
       if (action === 'back') {
         setShowAdd(false)
         setShowScan(false)
@@ -238,8 +253,8 @@ export default function Home() {
   async function handleDelete(gameId: number) {
     if (!confirm('Remover este jogo da biblioteca?')) return
     await invoke('delete_game', { gameId })
-    setSelected(0)
-    selectedRef.current = 0
+    setSelectedId(null)
+    selectedIdRef.current = null
     setPlaytime(0)
     setSessions([])
     loadGames()
@@ -268,7 +283,13 @@ export default function Home() {
     )
   }
 
-  const selectedGame = filtered[selected]
+  const selectedGame = selectedId !== null
+    ? filtered.find(g => g.id === selectedId) ?? null
+    : null
+
+  const selectedIndex = selectedId !== null
+    ? filtered.findIndex(g => g.id === selectedId)
+    : -1
 
   return (
     <>
@@ -310,13 +331,13 @@ export default function Home() {
             <div style={styles.navSection}>Biblioteca</div>
             <div
               style={{ ...styles.navItem, ...(filter === 'all' ? styles.navActive : {}) }}
-              onClick={() => { setFilter('all'); setSelected(0); selectedRef.current = 0 }}
+              onClick={() => { setFilter('all'); setSelectedId(null); selectedIdRef.current = null }}
             >
               ◈ Todos <span style={styles.navBadge}>{games.length}</span>
             </div>
             <div
               style={{ ...styles.navItem, ...(filter === 'favorites' ? styles.navActive : {}) }}
-              onClick={() => { setFilter('favorites'); setSelected(0); selectedRef.current = 0 }}
+              onClick={() => { setFilter('favorites'); setSelectedId(null); selectedIdRef.current = null }}
             >
               ♥ Favoritos <span style={styles.navBadge}>{games.filter(g => g.isFavorite).length}</span>
             </div>
@@ -325,7 +346,7 @@ export default function Home() {
               <div
                 key={g}
                 style={{ ...styles.navItem, ...(filter === g ? styles.navActive : {}) }}
-                onClick={() => { setFilter(g); setSelected(0); selectedRef.current = 0 }}
+                onClick={() => { setFilter(g); setSelectedId(null); selectedIdRef.current = null }}
               >
                 {g}
               </div>
@@ -349,50 +370,52 @@ export default function Home() {
                 ● {games.find(g => g.id === runningGameId)?.name} em execução
               </div>
             )}
+            <div style={styles.topBar}>
             <div style={styles.searchRow}>
+              <span style={{ color: '#6b7280', fontSize: '14px' }}>🔍</span>
               <input
                 style={styles.searchInput}
                 value={search}
                 onChange={e => {
                   setSearch(e.target.value)
-                  setSelected(0)
-                  selectedRef.current = 0
+                  setSelectedId(null)
+                  selectedIdRef.current = null
                 }}
-                placeholder="🔍  Buscar jogos..."
+                placeholder="Buscar jogos..."
               />
               {search && (
                 <button style={styles.searchClear} onClick={() => {
                   setSearch('')
-                  setSelected(0)
-                  selectedRef.current = 0
+                  setSelectedId(null)
+                  selectedIdRef.current = null
                 }}>
                   ✕
                 </button>
               )}
             </div>
-            <div style={styles.sortRow}>
+
+            <div style={styles.sortBtns}>
               <span style={styles.sortLabel}>Ordenar por</span>
-              <div style={styles.sortBtns}>
-                <button
-                  style={{ ...styles.sortBtn, ...(sortBy === 'name' ? styles.sortBtnActive : {}) }}
-                  onClick={() => setSortBy('name')}
-                >
-                  A — Z
-                </button>
-                <button
-                  style={{ ...styles.sortBtn, ...(sortBy === 'recent' ? styles.sortBtnActive : {}) }}
-                  onClick={() => setSortBy('recent')}
-                >
-                  Recentes
-                </button>
-                <button
-                  style={{ ...styles.sortBtn, ...(sortBy === 'playtime' ? styles.sortBtnActive : {}) }}
-                  onClick={() => setSortBy('playtime')}
-                >
-                  Mais jogados
-                </button>
-              </div>
+              <button
+                style={{ ...styles.sortBtn, ...(sortBy === 'name' ? styles.sortBtnActive : {}) }}
+                onClick={() => setSortBy('name')}
+              >
+                A — Z
+              </button>
+              <button
+                style={{ ...styles.sortBtn, ...(sortBy === 'recent' ? styles.sortBtnActive : {}) }}
+                onClick={() => setSortBy('recent')}
+              >
+                Recentes
+              </button>
+              <button
+                style={{ ...styles.sortBtn, ...(sortBy === 'playtime' ? styles.sortBtnActive : {}) }}
+                onClick={() => setSortBy('playtime')}
+              >
+                Mais jogados
+              </button>
             </div>
+          </div>
             {filtered.length === 0 ? (
               <div style={styles.center}>
                 <p style={styles.muted}>Nenhum jogo nessa categoria.</p>
@@ -403,11 +426,11 @@ export default function Home() {
                 <GameCard
                   key={game.id}
                   game={game}
-                  isSelected={selected === i}
+                  isSelected={game.id === selectedId}
                   isRunning={runningGameId === game.id}
                   onClick={() => {
-                    selectedRef.current = i
-                    setSelected(i)
+                    setSelectedId(Number(game.id))
+                    selectedIdRef.current = Number(game.id)
                     setDetailTab('info')
                     loadPlaytime(Number(game.id))
                     loadSessions(Number(game.id))
@@ -917,21 +940,17 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: '10px',
   },
 
-  sortRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '16px',
-  },
   sortLabel: {
     fontSize: '11px',
     color: '#4b5563',
     letterSpacing: '1px',
-    textTransform: 'uppercase' as const,
+    whiteSpace: 'nowrap' as const,
   },
   sortBtns: {
     display: 'flex',
+    alignItems: 'center',
     gap: '6px',
+    flexShrink: 0,
   },
   sortBtn: {
     background: '#1c2030',
@@ -942,7 +961,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
-    transition: 'all 0.15s',
+    whiteSpace: 'nowrap' as const,
   },
   sortBtnActive: {
     background: 'rgba(79, 142, 247, 0.12)',
@@ -950,19 +969,27 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#4f8ef7',
   },
 
+  topBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+
   searchRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '12px',
-    position: 'relative' as const,
-  },
-  searchInput: {
-    flex: 1,
     background: '#1c2030',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '8px',
-    padding: '9px 16px',
+    padding: '6px 12px',
+    flex: 1,
+  },
+  searchInput: {
+    flex: 1,
+    background: 'none',
+    border: 'none',
     fontSize: '13px',
     color: '#e8eaf0',
     outline: 'none',
@@ -974,6 +1001,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#6b7280',
     fontSize: '14px',
     cursor: 'pointer',
-    padding: '4px 8px',
+    padding: '0 4px',
   },
 }

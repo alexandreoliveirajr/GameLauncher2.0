@@ -598,3 +598,10 @@ pub async fn save_igdb_data(
 
     Ok(Some(path_str))
 }
+
+#[tauri::command]
+pub fn hide_taskbar(app: tauri::AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main")
+        .ok_or("Janela não encontrada")?;
+    Ok(())
+}

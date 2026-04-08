@@ -63,25 +63,13 @@ export default function Settings({ onClose }: Props) {
         {settings.inputMode === 'desktop' && (
           <div style={styles.section}>
             <p style={styles.sectionTitle}>Exibição</p>
-            <p style={styles.sectionDesc}>
-              Disponível apenas no modo Desktop.
+             <p style={styles.sectionDesc}>
+                No modo desktop a janela abre maximizada por padrão.
             </p>
             <div style={styles.optionRow}>
-              <div
-                style={{
-                  ...styles.option,
-                  ...(settings.windowMode === 'fullscreen' ? styles.optionActive : {}),
-                }}
-                onClick={() => setWindowMode('fullscreen')}
-              >
-                <div style={styles.optionIcon}>⛶</div>
-                <div style={{ flex: 1 }}>
-                  <p style={styles.optionLabel}>Tela cheia</p>
-                  <p style={styles.optionDesc}>Fullscreen com cursor e mouse</p>
-                </div>
-                {settings.windowMode === 'fullscreen' && (
-                  <span style={styles.optionCheck}>✓</span>
-                )}
+              <div style={styles.aboutBox}>
+                <p style={styles.aboutName}>Janela maximizada</p>
+                <p style={styles.aboutVersion}>Padrão Windows</p>
               </div>
 
               <div

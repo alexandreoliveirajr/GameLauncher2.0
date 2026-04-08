@@ -17,7 +17,8 @@
         "decorations": false,
         "resizable": true,
         "maximized": true,
-        "alwaysOnTop": false
+        "alwaysOnTop": false,
+        "backgroundColor": "#0d0f14"
       }
     ],
     "security": {
