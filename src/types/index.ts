@@ -18,8 +18,32 @@ export interface Session {
   durationSeconds: number | null
 }
 
+export interface SessionInfo {
+  day: string
+  totalSeconds: number
+  sessionCount: number
+}
+
+export interface GlobalStats {
+  totalGames: number
+  totalSessions: number
+  totalSeconds: number
+  mostPlayedName: string | null
+  mostPlayedSeconds: number
+  avgSessionSeconds: number
+}
+
+export interface ScannedGame {
+  name: string
+  exePath: string
+}
+
+export type InputMode = 'controller' | 'desktop'
+export type Theme = 'dark'
+export type WindowMode = 'fullscreen' | 'windowed'
+
 export interface AppSettings {
-  shellMode: boolean
-  exitCombo: string
-  theme: string
+  inputMode: InputMode
+  theme: Theme
+  windowMode: WindowMode
 }

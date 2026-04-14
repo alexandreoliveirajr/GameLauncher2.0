@@ -1,9 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-
-type InputMode = 'controller' | 'desktop'
-type Theme = 'dark'
-type WindowMode = 'fullscreen' | 'windowed'
+import { getSetting, setSetting, setWindowMode } from '../api/settings'
+import { InputMode, Theme, WindowMode } from '../types'
 
 interface Settings {
   inputMode: InputMode
@@ -37,9 +34,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadSettings() {
-      const inputMode = await invoke<string | null>('get_setting', { key: 'input_mode' })
-      const theme = await invoke<string | null>('get_setting', { key: 'theme' })
-      const windowMode = await invoke<string | null>('get_setting', { key: 'window_mode' })
+      const inputMode = await getSetting('input_mode')
+      const theme = await getSetting('theme')
+      const windowMode = await getSetting('window_mode')
 
       const resolvedInput = (inputMode as InputMode) || 'controller'
       const resolvedWindow = (windowMode as WindowMode) || 'fullscreen'
@@ -50,42 +47,44 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         windowMode: resolvedWindow,
       })
 
-      await applyWindowMode(resolvedInput, resolvedWindow)
+      await applyWindowMode(resolvedInput)
       setLoaded(true)
     }
     loadSettings()
   }, [])
 
-  async function applyWindowMode(inputMode: InputMode, windowMode: WindowMode) {
+  async function applyWindowMode(inputMode: InputMode) {
     if (inputMode === 'controller') {
-      await invoke('set_window_mode', { mode: 'console' })
+      await setWindowMode('console')
     } else {
-      await invoke('set_window_mode', { mode: 'desktop' })
+      await setWindowMode('desktop')
     }
-}
+  }
 
-  async function setInputMode(mode: InputMode) {
-    await invoke('set_setting', { key: 'input_mode', value: mode })
-    const currentWindow = settings.windowMode
-    await applyWindowMode(mode, currentWindow)
+  async function handleSetInputMode(mode: InputMode) {
+    await setSetting('input_mode', mode)
     setSettings(prev => ({ ...prev, inputMode: mode }))
   }
 
-  async function setTheme(theme: Theme) {
-    await invoke('set_setting', { key: 'theme', value: theme })
+  async function handleSetTheme(theme: Theme) {
+    await setSetting('theme', theme)
     setSettings(prev => ({ ...prev, theme }))
   }
 
-  async function setWindowMode(mode: WindowMode) {
-    await invoke('set_setting', { key: 'window_mode', value: mode })
-    await applyWindowMode(settings.inputMode, mode)
+  async function handleSetWindowMode(mode: WindowMode) {
+    await setSetting('window_mode', mode)
     setSettings(prev => ({ ...prev, windowMode: mode }))
   }
 
   if (!loaded) return null
 
   return (
-    <SettingsContext.Provider value={{ settings, setInputMode, setTheme, setWindowMode }}>
+    <SettingsContext.Provider value={{
+      settings,
+      setInputMode: handleSetInputMode,
+      setTheme: handleSetTheme,
+      setWindowMode: handleSetWindowMode,
+    }}>
       {children}
     </SettingsContext.Provider>
   )
