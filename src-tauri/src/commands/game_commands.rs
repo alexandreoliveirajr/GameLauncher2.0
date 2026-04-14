@@ -122,7 +122,11 @@ pub fn is_process_running(pid: u32) -> bool {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
         let output = Command::new("tasklist")
+            .creation_flags(CREATE_NO_WINDOW)
             .args(["/FI", &format!("PID eq {}", pid), "/NH"])
             .output();
 

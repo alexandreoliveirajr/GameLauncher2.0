@@ -1,0 +1,3 @@
+2026-04-14T01:48:40Z, 18792: Launcher cannot find wallpaper32.exe/wallpaper64.exe at path: D:/Projetos/nexus-launcher/src-tauri/launcher.exe.
+
+Usually this means your anti-virus deleted Wallpaper Engine files by mistake. Configure your anti-virus to ignore the directory and reinstall Wallpaper Engine

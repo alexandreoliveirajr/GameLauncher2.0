@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "nexus-launcher",
+  "productName": "dissonance-hub",
   "version": "0.1.0",
-  "identifier": "com.user.nexus-launcher",
+  "identifier": "com.user.dissonance-hub",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "NEXUS Launcher",
+        "title": "DISSONANCE HUB",
         "fullscreen": false,
         "decorations": false,
         "resizable": true,

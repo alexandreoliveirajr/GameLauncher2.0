@@ -53,19 +53,31 @@ pub fn set_window_mode(app: tauri::AppHandle, mode: String) -> Result<(), String
 
 #[tauri::command]
 pub fn shutdown_system() -> Result<(), String> {
-    std::process::Command::new("shutdown")
-        .args(["/s", "/t", "0"])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = std::process::Command::new("shutdown");
+    cmd.args(["/s", "/t", "0"]);
+    
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+
+    cmd.spawn().map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn restart_system() -> Result<(), String> {
-    std::process::Command::new("shutdown")
-        .args(["/r", "/t", "0"])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = std::process::Command::new("shutdown");
+    cmd.args(["/r", "/t", "0"]);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+
+    cmd.spawn().map_err(|e| e.to_string())?;
     Ok(())
 }
 

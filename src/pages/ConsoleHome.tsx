@@ -6,10 +6,12 @@ import { useGameSession } from '../hooks/useGameSession'
 import { useGamepad } from '../hooks/useGamepad'
 import { formatPlaytime, formatDate } from '../utils/format'
 import { toggleFavorite } from '../api/games'
+import { useSettings } from '../store/SettingsContext'
 import ExitMenu from '../components/ExitMenu'
 import Settings from '../pages/Settings'
 
 export default function ConsoleHome() {
+  const { setInputMode } = useSettings()
   const { games, loading, genres, loadGames } = useGames()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -104,7 +106,13 @@ export default function ConsoleHome() {
 
         {/* Header */}
         <div style={s.header}>
-          <span style={s.logo}>NEXUS</span>
+          <span style={s.logo}>DISSONANCE HUB</span>
+          <button
+            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '8px 16px', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif', letterSpacing: '1px' }}
+            onClick={() => setInputMode('desktop')}
+          >
+            🖱️ Sair do Console
+          </button>
           <button
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 16px', color: '#6b7280', fontSize: '12px', cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif', letterSpacing: '1px' }}
             onClick={() => setShowSettings(true)}

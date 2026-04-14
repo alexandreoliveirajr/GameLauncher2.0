@@ -38,7 +38,7 @@ export default function ExitMenu({ onClose }: Props) {
   return (
     <div style={styles.backdrop}>
       <div style={styles.container}>
-        <p style={styles.title}>NEXUS</p>
+        <p style={styles.title}>DISSONANCE HUB</p>
         <p style={styles.subtitle}>O que deseja fazer?</p>
 
         <div style={styles.options}>

@@ -95,7 +95,7 @@ export default function Settings({ onClose }: Props) {
         <div style={styles.section}>
           <p style={styles.sectionTitle}>Sobre</p>
           <div style={styles.aboutBox}>
-            <p style={styles.aboutName}>NEXUS Launcher</p>
+            <p style={styles.aboutName}>DISSONANCE HUB</p>
             <p style={styles.aboutVersion}>Versão 0.1.0</p>
           </div>
         </div>

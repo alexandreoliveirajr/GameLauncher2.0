@@ -35,19 +35,19 @@ function BootScreen({ onFinish }: { onFinish: () => void }) {
       transition: phase === 'done' ? 'opacity 0.4s ease' : 'none',
     }}>
       <div style={{
-        ...styles.bootLogo,
+        ...styles.bootLogoWrap,
         opacity: phase === 'logo' ? 0 : 1,
         transform: phase === 'logo' ? 'scale(0.92)' : 'scale(1)',
         transition: 'opacity 0.6s ease, transform 0.6s ease',
       }}>
-        NEXUS
+        <img src="/logo.png" style={styles.bootLogoImg} alt="Dissonance Hub" />
       </div>
       <div style={{
         ...styles.bootTagline,
         opacity: phase === 'loading' || phase === 'done' ? 1 : 0,
         transition: 'opacity 0.4s ease 0.2s',
       }}>
-        GAME LAUNCHER
+        DISSONANCE HUB
       </div>
       <div style={{
         ...styles.bootBarWrap,
@@ -100,9 +100,18 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center', justifyContent: 'center',
     zIndex: 9999, gap: '12px',
   },
-  bootLogo: {
-    fontSize: '80px', fontWeight: 800, color: '#4f8ef7',
-    letterSpacing: '16px', fontFamily: 'Segoe UI, sans-serif',
+  bootLogoWrap: {
+    width: '180px',
+    height: '180px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '8px',
+  },
+  bootLogoImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   bootTagline: {
     fontSize: '13px', color: '#4b5563', letterSpacing: '6px',

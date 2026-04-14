@@ -112,8 +112,8 @@ export default function Home() {
 
       {games.length === 0 ? (
         <div style={styles.center}>
-          <h1 style={styles.logo}>NEXUS</h1>
-          <p style={styles.muted}>Nenhum jogo na biblioteca ainda.</p>
+          <h1 style={styles.logo}>DISSONANCE HUB</h1>
+          <p style={styles.muted}>Sua biblioteca está vazia.</p>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button style={styles.addBtn} onClick={() => setShowAdd(true)}>+ Adicionar Jogo</button>
             <button style={styles.btnScan} onClick={() => setShowScan(true)}>⟳ Escanear Pasta</button>
@@ -124,7 +124,7 @@ export default function Home() {
 
           {/* Sidebar */}
           <div style={styles.sidebar}>
-            <div style={styles.sidebarLogo}>NEXUS</div>
+            <div style={styles.sidebarLogo}>DISSONANCE HUB</div>
             <div style={styles.navSection}>Biblioteca</div>
             <div
               style={{ ...styles.navItem, ...(filter === 'all' ? styles.navActive : {}) }}
