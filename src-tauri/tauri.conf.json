@@ -29,6 +29,14 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "COLE_SUA_CHAVE_PUBLICA_AQUI",
+      "endpoints": [
+        "https://github.com/SEU_USUARIO/SEU_REPOSITORIO/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useSettings } from '../store/SettingsContext'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 
 interface Props {
   onClose: () => void
@@ -6,6 +9,44 @@ interface Props {
 
 export default function Settings({ onClose }: Props) {
   const { settings, setInputMode, setWindowMode } = useSettings()
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'up-to-date' | 'error'>('idle')
+  const [updateError, setUpdateError] = useState('')
+  const [downloadProgress, setDownloadProgress] = useState(0)
+
+  async function handleCheckUpdate() {
+    setUpdateStatus('checking')
+    setUpdateError('')
+    try {
+      const update = await check()
+      if (update) {
+        setUpdateStatus('downloading')
+        let downloaded = 0
+        let contentLength = 0
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case 'Started':
+              contentLength = event.data.contentLength || 0
+              break
+            case 'Progress':
+              downloaded += event.data.chunkLength
+              if (contentLength > 0) {
+                setDownloadProgress(Math.round((downloaded / contentLength) * 100))
+              }
+              break
+            case 'Finished':
+              break
+          }
+        })
+        await relaunch()
+      } else {
+        setUpdateStatus('up-to-date')
+      }
+    } catch (e) {
+      console.error(e)
+      setUpdateStatus('error')
+      setUpdateError(String(e))
+    }
+  }
 
   return (
     <div style={styles.backdrop}>
@@ -91,6 +132,35 @@ export default function Settings({ onClose }: Props) {
             </div>
           </div>
         )}
+
+        <div style={styles.section}>
+          <p style={styles.sectionTitle}>Atualizações</p>
+          <p style={styles.sectionDesc}>
+            Verifica se há uma nova versão do launcher disponível.
+          </p>
+          <div style={styles.optionRow}>
+            <div style={styles.aboutBox}>
+              <div>
+                <p style={styles.aboutName}>Auto-Updater</p>
+                <p style={styles.aboutVersion}>
+                  {updateStatus === 'idle' && 'Pronto para verificar'}
+                  {updateStatus === 'checking' && 'Procurando...'}
+                  {updateStatus === 'up-to-date' && 'Você já está na versão mais recente!'}
+                  {updateStatus === 'downloading' && `Baixando atualização... ${downloadProgress}%`}
+                  {updateStatus === 'error' && 'Erro ao buscar atualização.'}
+                </p>
+                {updateError && <p style={{...styles.aboutVersion, color: '#ef4444', marginTop: 4}}>{updateError}</p>}
+              </div>
+              <button 
+                style={styles.btnPrimary} 
+                onClick={handleCheckUpdate}
+                disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+              >
+                Procurar
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div style={styles.section}>
           <p style={styles.sectionTitle}>Sobre</p>
@@ -239,5 +309,16 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontFamily: 'Segoe UI, sans-serif',
     width: '100%',
+  },
+  btnPrimary: {
+    background: '#4f8ef7',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    color: '#fff',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
   },
 }

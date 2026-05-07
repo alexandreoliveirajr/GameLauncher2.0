@@ -217,11 +217,38 @@ pub fn update_game(
     name: String,
     exe_path: String,
     genre: String,
+    description: Option<String>,
+    cover_path: Option<String>,
 ) -> Result<(), String> {
     let conn = get_conn(&app)?;
+
+    let mut final_cover_path = cover_path.clone();
+
+    if let Some(cp) = &cover_path {
+        let current_cover: Option<String> = conn.query_row(
+            "SELECT cover_path FROM games WHERE id = ?1",
+            [game_id],
+            |row| row.get(0),
+        ).unwrap_or(None);
+
+        if Some(cp.clone()) != current_cover && std::path::Path::new(cp).exists() {
+            let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+            let covers_dir = app_dir.join("covers");
+            std::fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
+            
+            let ext = std::path::Path::new(cp).extension().and_then(|e| e.to_str()).unwrap_or("jpg");
+            let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+            let new_cover_path = covers_dir.join(format!("{}_custom_{}.{}", game_id, timestamp, ext));
+            
+            std::fs::copy(cp, &new_cover_path).map_err(|e| format!("Erro ao copiar imagem: {}", e))?;
+            
+            final_cover_path = Some(new_cover_path.to_str().unwrap_or("").to_string());
+        }
+    }
+
     conn.execute(
-        "UPDATE games SET name = ?1, exe_path = ?2, genre = ?3 WHERE id = ?4",
-        (&name, &exe_path, &genre, &game_id),
+        "UPDATE games SET name = ?1, exe_path = ?2, genre = ?3, description = ?4, cover_path = ?5 WHERE id = ?6",
+        (&name, &exe_path, &genre, &description, &final_cover_path, &game_id),
     ).map_err(|e| e.to_string())?;
     Ok(())
 }

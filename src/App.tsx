@@ -40,28 +40,10 @@ function BootScreen({ onFinish }: { onFinish: () => void }) {
         transform: phase === 'logo' ? 'scale(0.92)' : 'scale(1)',
         transition: 'opacity 0.6s ease, transform 0.6s ease',
       }}>
-        <img src="/logo.png" style={styles.bootLogoImg} alt="Dissonance Hub" />
-      </div>
-      <div style={{
-        ...styles.bootTagline,
-        opacity: phase === 'loading' || phase === 'done' ? 1 : 0,
-        transition: 'opacity 0.4s ease 0.2s',
-      }}>
-        DISSONANCE HUB
-      </div>
-      <div style={{
-        ...styles.bootBarWrap,
-        opacity: phase === 'loading' || phase === 'done' ? 1 : 0,
-        transition: 'opacity 0.4s ease 0.3s',
-      }}>
-        <div style={styles.bootBarTrack}>
-          <div style={{
-            ...styles.bootBarFill,
-            width: `${Math.min(progress, 100)}%`,
-            transition: 'width 0.12s ease',
-          }} />
-        </div>
-        <p style={styles.bootBarLabel}>Carregando biblioteca...</p>
+        {/* Logo de fundo (apagado) */}
+        <img src="/logo.png" style={{ ...styles.bootLogoImg, opacity: 0.15, filter: 'grayscale(1)' }} alt="" />
+        {/* Logo de frente (colorido, revelando da esquerda pra direita) */}
+        <img src="/logo.png" style={{ ...styles.bootLogoImg, position: 'absolute', top: 0, left: 0, clipPath: `inset(0 ${100 - Math.min(progress, 100)}% 0 0)`, transition: 'clip-path 0.15s ease-out' }} alt="Dissonance Hub" />
       </div>
     </div>
   )
@@ -101,38 +83,17 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 9999, gap: '12px',
   },
   bootLogoWrap: {
-    width: '180px',
-    height: '180px',
+    width: '360px',
+    height: '360px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '8px',
+    position: 'relative',
   },
   bootLogoImg: {
     width: '100%',
     height: '100%',
     objectFit: 'contain',
-  },
-  bootTagline: {
-    fontSize: '13px', color: '#4b5563', letterSpacing: '6px',
-    fontFamily: 'Segoe UI, sans-serif', marginTop: '-8px',
-  },
-  bootBarWrap: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    gap: '10px', marginTop: '48px', width: '280px',
-  },
-  bootBarTrack: {
-    width: '100%', height: '2px',
-    background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden',
-  },
-  bootBarFill: {
-    height: '100%',
-    background: 'linear-gradient(to right, #4f8ef7, #7c5cf7)',
-    borderRadius: '2px',
-  },
-  bootBarLabel: {
-    fontSize: '11px', color: '#4b5563',
-    letterSpacing: '2px', fontFamily: 'Segoe UI, sans-serif',
   },
 }
 

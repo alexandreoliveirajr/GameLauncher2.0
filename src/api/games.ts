@@ -22,8 +22,8 @@ export const toggleFavorite = (gameId: number) =>
 export const deleteGame = (gameId: number) =>
   invoke<void>('delete_game', { gameId })
 
-export const updateGame = (gameId: number, name: string, exePath: string, genre: string) =>
-  invoke<void>('update_game', { gameId, name, exePath, genre })
+export const updateGame = (gameId: number, name: string, exePath: string, genre: string, description: string | null, coverPath: string | null) =>
+  invoke<void>('update_game', { gameId, name, exePath, genre, description, coverPath })
 
 export const getGamePlaytime = (gameId: number) =>
   invoke<number>('get_game_playtime', { gameId })

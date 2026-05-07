@@ -7,6 +7,8 @@ mod igdb;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             db::init(app.handle())?;
             gamepad::start_gamepad_listener(app.handle().clone());

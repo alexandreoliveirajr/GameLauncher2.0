@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { useState, useEffect } from 'react'
+import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Game } from '../types'
 
@@ -16,10 +16,18 @@ interface Props {
   onUpdated: () => void
 }
 
+const predefinedGenres = ['Geral', 'RPG', 'Ação', 'Estratégia', 'Aventura', 'FPS', 'Simulação', 'Indie']
+
 export default function EditGameModal({ game, onClose, onUpdated }: Props) {
+  const isCustomGenre = game.genre && !predefinedGenres.includes(game.genre)
+
   const [name, setName] = useState(game.name)
   const [exePath, setExePath] = useState(game.exePath)
-  const [genre, setGenre] = useState(game.genre)
+  const [genreSelect, setGenreSelect] = useState(isCustomGenre ? 'Outro' : (game.genre || 'Geral'))
+  const [customGenre, setCustomGenre] = useState(isCustomGenre ? game.genre : '')
+  const [description, setDescription] = useState(game.description || '')
+  const [coverPath, setCoverPath] = useState(game.coverPath || '')
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
@@ -36,6 +44,14 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
     if (selected) setExePath(selected as string)
   }
 
+  async function handleBrowseCover() {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+    })
+    if (selected) setCoverPath(selected as string)
+  }
+
   async function handleSearchIGDB(newOffset = 0) {
     if (!name.trim()) return
     setSearching(true)
@@ -45,7 +61,16 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
       const result = await invoke<IGDBPreview | null>('search_igdb_preview', { name, offset: newOffset })
       setPreview(result)
       setOffset(newOffset)
-      if (result?.genre) setGenre(result.genre)
+      if (result?.genre) {
+        if (!predefinedGenres.includes(result.genre)) {
+          setGenreSelect('Outro')
+          setCustomGenre(result.genre)
+        } else {
+          setGenreSelect(result.genre)
+        }
+      }
+      if (result?.summary) setDescription(result.summary)
+      if (result?.coverUrl) setCoverPath(result.coverUrl)
     } catch (e) {
       console.error(e)
     } finally {
@@ -57,13 +82,22 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
     if (!preview) return
     setFetchingCover(true)
     try {
-      await invoke('save_igdb_data', {
+      const savedPath = await invoke<string>('save_igdb_data', {
         gameId: game.id,
         coverUrl: preview.coverUrl,
         summary: preview.summary,
         genre: preview.genre,
       })
-      if (preview.genre) setGenre(preview.genre)
+      if (preview.genre) {
+        if (!predefinedGenres.includes(preview.genre)) {
+          setGenreSelect('Outro')
+          setCustomGenre(preview.genre)
+        } else {
+          setGenreSelect(preview.genre)
+        }
+      }
+      if (preview.summary) setDescription(preview.summary)
+      if (savedPath) setCoverPath(savedPath)
       setCoverFetched(true)
     } catch (e) {
       console.error(e)
@@ -79,7 +113,15 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
     }
     setLoading(true)
     try {
-      await invoke('update_game', { gameId: game.id, name, exePath, genre })
+      const finalGenre = genreSelect === 'Outro' ? customGenre.trim() : genreSelect
+      await invoke('update_game', { 
+        gameId: game.id, 
+        name, 
+        exePath, 
+        genre: finalGenre || 'Geral',
+        description: description.trim() || null,
+        coverPath: coverPath.trim() || null
+      })
       onUpdated()
       onClose()
     } catch (e) {
@@ -175,11 +217,33 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
         </div>
 
         <div style={styles.field}>
+          <label style={styles.label}>Capa Personalizada</label>
+          <div style={styles.pathRow}>
+            <input
+              style={{ ...styles.input, flex: 1 }}
+              value={coverPath}
+              placeholder="Caminho da imagem local..."
+              onChange={e => setCoverPath(e.target.value)}
+            />
+            <button style={styles.browseBtn} onClick={handleBrowseCover}>
+              📷
+            </button>
+          </div>
+          {coverPath && (
+            <img 
+              src={coverPath.startsWith('http') ? coverPath : convertFileSrc(coverPath)} 
+              alt="Capa" 
+              style={{ width: '60px', height: '80px', objectFit: 'cover', borderRadius: '4px', marginTop: '4px' }} 
+            />
+          )}
+        </div>
+
+        <div style={styles.field}>
           <label style={styles.label}>Gênero</label>
           <select
             style={styles.input}
-            value={genre}
-            onChange={e => setGenre(e.target.value)}
+            value={genreSelect}
+            onChange={e => setGenreSelect(e.target.value)}
           >
             <option>Geral</option>
             <option>RPG</option>
@@ -189,7 +253,26 @@ export default function EditGameModal({ game, onClose, onUpdated }: Props) {
             <option>FPS</option>
             <option>Simulação</option>
             <option>Indie</option>
+            <option>Outro</option>
           </select>
+          {genreSelect === 'Outro' && (
+            <input
+              style={{ ...styles.input, marginTop: '6px' }}
+              placeholder="Digite o gênero personalizado..."
+              value={customGenre}
+              onChange={e => setCustomGenre(e.target.value)}
+            />
+          )}
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>Descrição (Bio)</label>
+          <textarea
+            style={{ ...styles.input, minHeight: '70px', resize: 'vertical' }}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Digite a sinopse do jogo..."
+          />
         </div>
 
         {error && <p style={styles.error}>{error}</p>}
