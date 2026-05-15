@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Game } from '../types'
 import { useGames } from '../hooks/useGames'
 import { useGameSession } from '../hooks/useGameSession'
@@ -21,7 +20,7 @@ export default function ConsoleHome() {
   const filterIndexRef = useRef(0)
   const filteredRef = useRef<Game[]>([])
 
-  const { runningPid, runningGameId, playtime, launchGame } = useGameSession(loadGames)
+  const { runningGameId, playtime, launchGame } = useGameSession(loadGames)
 
   const consoleGenres = ['Todos', ...genres]
 
