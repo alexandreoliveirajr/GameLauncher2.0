@@ -31,9 +31,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "COLE_SUA_CHAVE_PUBLICA_AQUI",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCRkM3MzQwOTc3Q0IyRjYKUldUMnNueVhRSFA4dTNvendkeSt6ZGpFN2RnYzV2cnAwUktBOEhaSzd3ak5aQXFTcUZZdmlaNVEK",
       "endpoints": [
-        "https://github.com/SEU_USUARIO/SEU_REPOSITORIO/releases/latest/download/latest.json"
+        "https://github.com/alexandreoliveirajr/GameLauncher2.0/releases/latest/download/latest.json"
       ]
     }
   },

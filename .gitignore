@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+*.key
+
 
 tauri.key
+dashhub.key
