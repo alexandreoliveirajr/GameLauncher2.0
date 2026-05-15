@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Game } from '../types'
 import { listGames, getGamePlaytime } from '../api/games'
+import { useSettings } from '../store/SettingsContext'
 
 type Filter = 'all' | 'favorites' | string
 type SortBy = 'name' | 'playtime' | 'recent'
@@ -12,6 +13,9 @@ export function useGames() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('name')
   const [playtimeMap, setPlaytimeMap] = useState<Record<number, number>>({})
+  
+  const { settings, setShowUninstalled } = useSettings()
+  const showUninstalled = settings.showUninstalled
 
   const gamesRef = useRef<Game[]>([])
 
@@ -19,6 +23,7 @@ export function useGames() {
 
   const filtered = games
     .filter(g => {
+      if (!showUninstalled && !g.isInstalled) return false
       if (search) return g.name.toLowerCase().includes(search.toLowerCase())
       if (filter === 'all') return true
       if (filter === 'favorites') return g.isFavorite
@@ -78,6 +83,8 @@ export function useGames() {
     setSearch,
     sortBy,
     setSortBy,
+    showUninstalled,
+    setShowUninstalled,
     playtimeMap,
     genres,
     loadGames,

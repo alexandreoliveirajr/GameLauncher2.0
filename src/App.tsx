@@ -5,45 +5,35 @@ import Home from './pages/Home'
 import Library from './pages/Library'
 import ConsoleHome from './pages/ConsoleHome'
 import { SettingsProvider, useSettings } from './store/SettingsContext'
+import dashLogo from '../src-tauri/icons/logo.png'
 
 function BootScreen({ onFinish }: { onFinish: () => void }) {
-  const [progress, setProgress] = useState(0)
-  const [phase, setPhase] = useState<'logo' | 'loading' | 'done'>('logo')
+  const [phase, setPhase] = useState<'start' | 'fade-in' | 'done'>('start')
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('loading'), 800)
-    const t2 = setTimeout(() => setPhase('done'), 2600)
-    const t3 = setTimeout(() => onFinish(), 3000)
+    // 100ms depois, dispara o fade-in e scale (surge como no Xbox/Steam)
+    const t1 = setTimeout(() => setPhase('fade-in'), 100)
+    // 2500ms depois a tela inteira começa a sumir em fade-out
+    const t2 = setTimeout(() => setPhase('done'), 2500)
+    // 2900ms o componente é desmontado e libera o app
+    const t3 = setTimeout(() => onFinish(), 2900)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [])
-
-  useEffect(() => {
-    if (phase !== 'loading') return
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) { clearInterval(interval); return 100 }
-        return p + Math.random() * 18
-      })
-    }, 120)
-    return () => clearInterval(interval)
-  }, [phase])
+  }, [onFinish])
 
   return (
     <div style={{
       ...styles.boot,
       opacity: phase === 'done' ? 0 : 1,
-      transition: phase === 'done' ? 'opacity 0.4s ease' : 'none',
+      transition: 'opacity 0.4s ease',
     }}>
       <div style={{
         ...styles.bootLogoWrap,
-        opacity: phase === 'logo' ? 0 : 1,
-        transform: phase === 'logo' ? 'scale(0.92)' : 'scale(1)',
-        transition: 'opacity 0.6s ease, transform 0.6s ease',
+        opacity: phase === 'start' ? 0 : 1,
+        transform: phase === 'start' ? 'scale(0.75)' : 'scale(1)',
+        filter: phase === 'start' ? 'blur(4px)' : 'blur(0px)',
+        transition: 'opacity 1.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 1.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 1.2s ease-out',
       }}>
-        {/* Logo de fundo (apagado) */}
-        <img src="/logo.png" style={{ ...styles.bootLogoImg, opacity: 0.15, filter: 'grayscale(1)' }} alt="" />
-        {/* Logo de frente (colorido, revelando da esquerda pra direita) */}
-        <img src="/logo.png" style={{ ...styles.bootLogoImg, position: 'absolute', top: 0, left: 0, clipPath: `inset(0 ${100 - Math.min(progress, 100)}% 0 0)`, transition: 'clip-path 0.15s ease-out' }} alt="Dissonance Hub" />
+        <img src={dashLogo} style={styles.bootLogoImg} alt="Dash Hub" />
       </div>
     </div>
   )

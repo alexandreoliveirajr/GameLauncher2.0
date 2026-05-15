@@ -22,7 +22,7 @@ export default function Home() {
   const {
     games, filtered, loading,
     filter, setFilter, search, setSearch,
-    sortBy, setSortBy, genres, loadGames,
+    sortBy, setSortBy, showUninstalled, setShowUninstalled, genres, loadGames,
   } = useGames()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -52,7 +52,7 @@ export default function Home() {
     },
     onConfirm: () => {
       const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
-      if (game && !runningPidRef.current) launchGame(game)
+      if (game && !runningPidRef.current && game.isInstalled) launchGame(game)
     },
     onFavorite: () => {
       const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
@@ -112,7 +112,7 @@ export default function Home() {
 
       {games.length === 0 ? (
         <div style={styles.center}>
-          <h1 style={styles.logo}>DISSONANCE HUB</h1>
+          <h1 style={styles.logo}>DASH HUB</h1>
           <p style={styles.muted}>Sua biblioteca está vazia.</p>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button style={styles.addBtn} onClick={() => setShowAdd(true)}>+ Adicionar Jogo</button>
@@ -124,7 +124,7 @@ export default function Home() {
 
           {/* Sidebar */}
           <div style={styles.sidebar}>
-            <div style={styles.sidebarLogo}>DISSONANCE HUB</div>
+            <div style={styles.sidebarLogo}>DASH HUB</div>
             <div style={styles.navSection}>Biblioteca</div>
             <div
               style={{ ...styles.navItem, ...(filter === 'all' ? styles.navActive : {}) }}
@@ -179,6 +179,14 @@ export default function Home() {
                 )}
               </div>
               <div style={styles.sortBtns}>
+                <button
+                  style={{ ...styles.sortBtn, ...(showUninstalled ? styles.sortBtnActive : {}) }}
+                  onClick={() => setShowUninstalled(!showUninstalled)}
+                  title={showUninstalled ? 'Ocultar jogos não instalados' : 'Exibir jogos não instalados'}
+                >
+                  {showUninstalled ? '👁️ Todos' : '👁️‍🗨️ Apenas Instalados'}
+                </button>
+                <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
                 <span style={styles.sortLabel}>Ordenar por</span>
                 {(['name', 'recent', 'playtime'] as const).map(s => (
                   <button
@@ -211,7 +219,9 @@ export default function Home() {
                       loadPlaytime(Number(game.id))
                       loadSessions(Number(game.id))
                     }}
-                    onDoubleClick={() => launchGame(game)}
+                    onDoubleClick={() => {
+                      if (game.isInstalled) launchGame(game)
+                    }}
                   />
                 ))}
               </div>
@@ -255,7 +265,15 @@ export default function Home() {
                     </div>
                   </div>
                   <p style={styles.detailPath}>{selectedGame.exePath}</p>
-                  <button style={{ ...styles.playBtn, opacity: runningPid ? 0.5 : 1 }} onClick={() => launchGame(selectedGame)} disabled={!!runningPid}>▶ Jogar</button>
+                  <button 
+                    style={{ ...styles.playBtn, opacity: runningPid || !selectedGame.isInstalled ? 0.5 : 1 }} 
+                    onClick={() => {
+                      if (selectedGame.isInstalled) launchGame(selectedGame)
+                    }} 
+                    disabled={!!runningPid || !selectedGame.isInstalled}
+                  >
+                    {!selectedGame.isInstalled ? 'Não Encontrado' : '▶ Jogar'}
+                  </button>
                   <button style={styles.editBtn} onClick={() => setShowEdit(true)}>✎ Editar</button>
                   <button
                     style={{ ...styles.favBtn, color: selectedGame.isFavorite ? '#f59e0b' : '#6b7280', borderColor: selectedGame.isFavorite ? '#f59e0b' : 'rgba(255,255,255,0.08)' }}

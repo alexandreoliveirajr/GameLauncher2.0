@@ -3,21 +3,24 @@ import { invoke } from '@tauri-apps/api/core'
 
 interface Props {
   onClose: () => void
+  onSwitchMode?: () => void
 }
 
-const options = [
-  { id: 'back', label: 'Voltar', icon: '←', desc: 'Continuar no launcher', color: '#6b7280' },
-  { id: 'shutdown', label: 'Desligar', icon: '⏻', desc: 'Desligar o computador', color: '#ef4444' },
-  { id: 'restart', label: 'Reiniciar', icon: '↺', desc: 'Reiniciar o computador', color: '#f59e0b' },
-  { id: 'exit', label: 'Sair ao Windows', icon: '⊞', desc: 'Fechar o launcher', color: '#4f8ef7' },
-]
-
-export default function ExitMenu({ onClose }: Props) {
+export default function ExitMenu({ onClose, onSwitchMode }: Props) {
   const [selected, setSelected] = useState(0)
   const [confirming, setConfirming] = useState<string | null>(null)
 
+  const options = [
+    { id: 'back', label: 'Voltar', icon: '←', desc: 'Continuar no launcher', color: '#6b7280' },
+    ...(onSwitchMode ? [{ id: 'desktop', label: 'Modo Desktop', icon: '🖱️', desc: 'Mudar para teclado/mouse', color: '#8b5cf6' }] : []),
+    { id: 'shutdown', label: 'Desligar', icon: '⏻', desc: 'Desligar o computador', color: '#ef4444' },
+    { id: 'restart', label: 'Reiniciar', icon: '↺', desc: 'Reiniciar o computador', color: '#f59e0b' },
+    { id: 'exit', label: 'Sair ao Windows', icon: '⊞', desc: 'Fechar o launcher', color: '#4f8ef7' },
+  ]
+
   async function handleSelect(id: string) {
     if (id === 'back') { onClose(); return }
+    if (id === 'desktop' && onSwitchMode) { onSwitchMode(); return }
     if (confirming === id) {
       await execute(id)
     } else {
@@ -38,7 +41,7 @@ export default function ExitMenu({ onClose }: Props) {
   return (
     <div style={styles.backdrop}>
       <div style={styles.container}>
-        <p style={styles.title}>DISSONANCE HUB</p>
+        <p style={styles.title}>DASH HUB</p>
         <p style={styles.subtitle}>O que deseja fazer?</p>
 
         <div style={styles.options}>

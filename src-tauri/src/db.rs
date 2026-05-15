@@ -48,6 +48,17 @@ pub fn init(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         [],
     );
 
+    // Corrige o bug de tempo de jogo:
+    // Se o launcher foi fechado enquanto um jogo estava rodando, a sessão ficou aberta.
+    // Setamos duration_seconds = 0 para não contabilizar 50 horas na próxima vez que abrir.
+    let _ = conn.execute(
+        "UPDATE sessions
+         SET ended_at = started_at,
+             duration_seconds = 0
+         WHERE ended_at IS NULL",
+        [],
+    );
+
     println!("Banco inicializado em: {:?}", db_path);
     Ok(())
 }

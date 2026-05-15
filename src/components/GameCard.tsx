@@ -22,19 +22,21 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
         background: '#151820',
         borderRadius: '10px',
         overflow: 'hidden',
-        cursor: 'pointer',
+        cursor: game.isInstalled ? 'pointer' : 'not-allowed',
         height: '250px',
         flexShrink: 0,
+        opacity: game.isInstalled ? 1 : 0.45,
+        filter: game.isInstalled ? 'none' : 'grayscale(100%)',
         border: isSelected
           ? '2px solid #4f8ef7'
-          : hovered
+          : hovered && game.isInstalled
           ? '2px solid rgba(79, 142, 247, 0.4)'
           : '2px solid rgba(255,255,255,0.06)',
-        transform: hovered && !isSelected ? 'translateY(-3px)' : 'translateY(0)',
+        transform: hovered && !isSelected && game.isInstalled ? 'translateY(-3px)' : 'translateY(0)',
         transition: 'transform 0.15s ease, border-color 0.15s ease',
         boxShadow: isSelected
           ? '0 0 0 1px rgba(79, 142, 247, 0.2)'
-          : hovered
+          : hovered && game.isInstalled
           ? '0 8px 24px rgba(0,0,0,0.4)'
           : 'none',
       }}
@@ -107,12 +109,12 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
           }}>
             <span style={{
               fontSize: '11px',
-              color: 'rgba(255,255,255,0.9)',
+              color: game.isInstalled ? 'rgba(255,255,255,0.9)' : '#ef4444',
               letterSpacing: '3px',
               fontFamily: 'Segoe UI, sans-serif',
               fontWeight: 700,
             }}>
-              JOGAR
+              {game.isInstalled ? 'JOGAR' : 'NÃO ENCONTRADO'}
             </span>
           </div>
         )}

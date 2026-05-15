@@ -8,6 +8,7 @@ export interface Game {
   addedAt: string
   isFavorite: boolean
   lastPlayedAt: string | null
+  isInstalled: boolean
 }
 
 export interface Session {

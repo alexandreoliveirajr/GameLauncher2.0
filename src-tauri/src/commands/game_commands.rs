@@ -14,6 +14,7 @@ pub struct Game {
     pub added_at: String,
     pub is_favorite: bool,
     pub last_played_at: Option<String>,
+    pub is_installed: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -65,16 +66,20 @@ pub fn list_games(app: tauri::AppHandle) -> Result<Vec<Game>, String> {
     ).map_err(|e| e.to_string())?;
 
     let games = stmt.query_map([], |row| {
+        let exe_path: String = row.get(2)?;
+        let is_installed = std::path::Path::new(&exe_path).exists();
+
         Ok(Game {
             id: row.get(0)?,
             name: row.get(1)?,
-            exe_path: row.get(2)?,
+            exe_path,
             genre: row.get(3)?,
             cover_path: row.get(4)?,
             description: row.get(5)?,
             added_at: row.get(6)?,
             is_favorite: row.get::<_, i32>(7)? == 1,
             last_played_at: row.get(8)?,
+            is_installed,
         })
     }).map_err(|e| e.to_string())?
     .filter_map(|g| g.ok())

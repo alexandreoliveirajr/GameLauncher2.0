@@ -32,7 +32,10 @@ export function useGamepad(options: UseGamepadOptions = {}) {
   // Abre o menu de saída com Escape
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setShowExit(true)
+      if (e.key === 'Escape') {
+        e.preventDefault() // Impede que o Chromium saia do fullscreen
+        setShowExit(true)
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)

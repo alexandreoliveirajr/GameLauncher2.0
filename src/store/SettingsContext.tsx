@@ -6,6 +6,7 @@ interface Settings {
   inputMode: InputMode
   theme: Theme
   windowMode: WindowMode
+  showUninstalled: boolean
 }
 
 interface SettingsContextType {
@@ -13,12 +14,14 @@ interface SettingsContextType {
   setInputMode: (mode: InputMode) => void
   setTheme: (theme: Theme) => void
   setWindowMode: (mode: WindowMode) => void
+  setShowUninstalled: (show: boolean) => void
 }
 
 const defaultSettings: Settings = {
   inputMode: 'controller',
   theme: 'dark',
   windowMode: 'fullscreen',
+  showUninstalled: true,
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -26,6 +29,7 @@ const SettingsContext = createContext<SettingsContextType>({
   setInputMode: () => {},
   setTheme: () => {},
   setWindowMode: () => {},
+  setShowUninstalled: () => {},
 })
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -37,14 +41,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const inputMode = await getSetting('input_mode')
       const theme = await getSetting('theme')
       const windowMode = await getSetting('window_mode')
+      const showUninstalledRaw = await getSetting('show_uninstalled')
 
       const resolvedInput = (inputMode as InputMode) || 'controller'
       const resolvedWindow = (windowMode as WindowMode) || 'fullscreen'
+      const resolvedShowUninstalled = showUninstalledRaw === null ? true : showUninstalledRaw === 'true'
 
       setSettings({
         inputMode: resolvedInput,
         theme: (theme as Theme) || 'dark',
         windowMode: resolvedWindow,
+        showUninstalled: resolvedShowUninstalled,
       })
 
       await applyWindowMode(resolvedInput)
@@ -76,6 +83,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, windowMode: mode }))
   }
 
+  async function handleSetShowUninstalled(show: boolean) {
+    await setSetting('show_uninstalled', show ? 'true' : 'false')
+    setSettings(prev => ({ ...prev, showUninstalled: show }))
+  }
+
   if (!loaded) return null
 
   return (
@@ -84,6 +96,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setInputMode: handleSetInputMode,
       setTheme: handleSetTheme,
       setWindowMode: handleSetWindowMode,
+      setShowUninstalled: handleSetShowUninstalled,
     }}>
       {children}
     </SettingsContext.Provider>

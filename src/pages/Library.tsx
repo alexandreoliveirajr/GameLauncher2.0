@@ -33,7 +33,9 @@ export default function Library() {
               isSelected={false}
               isRunning={runningGameId === game.id}
               onClick={() => {}}
-              onDoubleClick={() => launchGame(game)}
+              onDoubleClick={() => {
+                if (game.isInstalled) launchGame(game)
+              }}
             />
           ))}
         </div>
