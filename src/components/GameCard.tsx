@@ -15,6 +15,13 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
   const [imgError, setImgError] = useState(false)
 
   const hasCover = game.coverPath && !imgError
+  
+  const isSteam = game.exePath.startsWith('steam://')
+  const isEpic = game.exePath.startsWith('com.epicgames')
+
+  const canPlay = game.isInstalled
+  const canInstall = !game.isInstalled && isSteam
+  const isClickable = canPlay || canInstall
 
   return (
     <div
@@ -22,21 +29,21 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
         background: '#151820',
         borderRadius: '10px',
         overflow: 'hidden',
-        cursor: game.isInstalled ? 'pointer' : 'not-allowed',
+        cursor: isClickable ? 'pointer' : 'not-allowed',
         height: '250px',
         flexShrink: 0,
         opacity: game.isInstalled ? 1 : 0.45,
         filter: game.isInstalled ? 'none' : 'grayscale(100%)',
         border: isSelected
           ? '2px solid #4f8ef7'
-          : hovered && game.isInstalled
+          : hovered && isClickable
           ? '2px solid rgba(79, 142, 247, 0.4)'
           : '2px solid rgba(255,255,255,0.06)',
-        transform: hovered && !isSelected && game.isInstalled ? 'translateY(-3px)' : 'translateY(0)',
+        transform: hovered && !isSelected && isClickable ? 'translateY(-3px)' : 'translateY(0)',
         transition: 'transform 0.15s ease, border-color 0.15s ease',
         boxShadow: isSelected
           ? '0 0 0 1px rgba(79, 142, 247, 0.2)'
-          : hovered && game.isInstalled
+          : hovered && isClickable
           ? '0 8px 24px rgba(0,0,0,0.4)'
           : 'none',
       }}
@@ -56,7 +63,7 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
       }}>
         {hasCover ? (
           <img
-            src={convertFileSrc(game.coverPath?.replace(/\\/g, '/') ?? '') + '?t=' + Date.now()}
+            src={game.coverPath?.startsWith('http') ? game.coverPath : convertFileSrc(game.coverPath?.replace(/\\/g, '/') ?? '') + '?t=' + Date.now()}
             alt={game.name}
             style={{
               width: '100%',
@@ -109,36 +116,42 @@ export default function GameCard({ game, isSelected, isRunning, onClick, onDoubl
           }}>
             <span style={{
               fontSize: '11px',
-              color: game.isInstalled ? 'rgba(255,255,255,0.9)' : '#ef4444',
+              color: game.isInstalled ? 'rgba(255,255,255,0.9)' : (canInstall ? '#4f8ef7' : '#ef4444'),
               letterSpacing: '3px',
               fontFamily: 'Segoe UI, sans-serif',
               fontWeight: 700,
             }}>
-              {game.isInstalled ? 'JOGAR' : 'NÃO ENCONTRADO'}
+              {game.isInstalled ? 'JOGAR' : (canInstall ? 'INSTALAR' : 'NÃO ENCONTRADO')}
             </span>
           </div>
         )}
       </div>
 
-      <div style={{ padding: '8px 10px' }}>
-        <p style={{
-          fontSize: '12px',
-          fontWeight: 600,
-          color: hovered ? '#ffffff' : '#e8eaf0',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          transition: 'color 0.15s ease',
-        }}>
-          {game.name}
-        </p>
-        <p style={{
-          fontSize: '10px',
-          color: isRunning ? '#22c55e' : '#6b7280',
-          marginTop: '2px',
-        }}>
-          {isRunning ? '● Rodando' : game.genre}
-        </p>
+      <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: hovered ? '#ffffff' : '#e8eaf0',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            transition: 'color 0.15s ease',
+          }}>
+            {game.name}
+          </p>
+          <p style={{
+            fontSize: '10px',
+            color: isRunning ? '#22c55e' : '#6b7280',
+            marginTop: '2px',
+          }}>
+            {isRunning ? '● Rodando' : game.genre}
+          </p>
+        </div>
+        <div style={{ flexShrink: 0, paddingLeft: '8px' }}>
+          {isSteam && <span style={{ background: '#171a21', color: '#c7d5e0', padding: '3px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800, letterSpacing: '1px' }}>STEAM</span>}
+          {isEpic && <span style={{ background: '#2a2a2a', color: '#ffffff', padding: '3px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800, letterSpacing: '1px' }}>EPIC</span>}
+        </div>
       </div>
     </div>
   )

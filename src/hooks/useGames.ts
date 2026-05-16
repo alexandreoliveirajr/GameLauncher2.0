@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Game } from '../types'
 import { listGames, getGamePlaytime } from '../api/games'
 import { useSettings } from '../store/SettingsContext'
+import { invoke } from '@tauri-apps/api/core'
 
 type Filter = 'all' | 'favorites' | string
 type SortBy = 'name' | 'playtime' | 'recent'
@@ -57,7 +58,18 @@ export function useGames() {
   }, [])
 
   useEffect(() => {
+    // 1. Carrega instantaneamente os jogos do DB (zero peso, tela imediata)
     loadGames()
+
+    // 2. Manda o Rust varrer a Steam e Epic em uma thread oculta
+    invoke('auto_import_store_games')
+      .then((importedCount) => {
+        if (Number(importedCount) > 0) {
+          console.log(`[Auto-Import] ${importedCount} jogos encontrados e vinculados!`)
+          loadGames()
+        }
+      })
+      .catch(err => console.error('[Auto-Import] Erro na varredura silenciosa:', err))
   }, [loadGames])
 
   useEffect(() => {

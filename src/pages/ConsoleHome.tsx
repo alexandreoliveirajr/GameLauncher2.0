@@ -81,7 +81,15 @@ export default function ConsoleHome() {
     },
     onConfirm: () => {
       const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
-      if (game && game.isInstalled) launchGame(game)
+      if (game) {
+        if (game.isInstalled) {
+          launchGame(game)
+        } else if (game.exePath.startsWith('steam://')) {
+          import('@tauri-apps/api/core').then(({ invoke }) => {
+            invoke('install_game', { gameId: game.id })
+          })
+        }
+      }
     },
     onFavorite: () => {
       const game = filteredRef.current.find(g => g.id === selectedIdRef.current)
@@ -118,6 +126,9 @@ export default function ConsoleHome() {
     : filtered[0] ?? null
 
   const selectedIndex = selectedGame ? filtered.findIndex(g => g.id === selectedGame.id) : 0
+  
+  const isSteam = selectedGame?.exePath.startsWith('steam://')
+  const isEpic = selectedGame?.exePath.startsWith('com.epicgames')
 
   // Configurações do Carrossel Horizontal
   const ITEM_WIDTH = 120
@@ -164,16 +175,22 @@ export default function ConsoleHome() {
             <div style={{ transform: 'translateY(0)', transition: 'all 0.3s ease' }}>
               <img src="/logo.png" style={{ height: '30px', opacity: 0.8, marginBottom: '16px' }} alt="" />
               <h1 style={s.title}>{selectedGame.name}</h1>
-              <p style={s.genre}>{selectedGame.genre}  •  {formatPlaytime(playtime)} jogados</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
+                <p style={s.genre}>{selectedGame.genre}  •  {formatPlaytime(playtime)} jogados</p>
+                {isSteam && <span style={{ background: '#171a21', color: '#c7d5e0', padding: '3px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, letterSpacing: '1px' }}>STEAM</span>}
+                {isEpic && <span style={{ background: '#2a2a2a', color: '#ffffff', padding: '3px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, letterSpacing: '1px' }}>EPIC</span>}
+              </div>
               
-              {!selectedGame.isInstalled && (
+              {!selectedGame.isInstalled && !isSteam && (
                 <div style={s.uninstalledBadge}>⚠️ Jogo não encontrado no disco</div>
               )}
 
-              <div style={s.playBtn}>
-                <span style={s.btnIcon}>A</span>
-                <span>{runningGameId === selectedGame.id ? 'Rodando' : 'Jogar'}</span>
-              </div>
+              {(!selectedGame.isInstalled && isSteam) || selectedGame.isInstalled ? (
+                <div style={s.playBtn}>
+                  <span style={s.btnIcon}>A</span>
+                  <span>{runningGameId === selectedGame.id ? 'Rodando' : (selectedGame.isInstalled ? 'Jogar' : 'Instalar')}</span>
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -253,7 +270,7 @@ const s: Record<string, React.CSSProperties> = {
   
   focusArea: { position: 'absolute', top: '25%', left: '100px', width: '600px', zIndex: 10 },
   title: { fontSize: '56px', fontWeight: 800, margin: '0 0 8px 0', textShadow: '0 4px 20px rgba(0,0,0,0.8)', lineHeight: '1.1' },
-  genre: { fontSize: '16px', fontWeight: 500, opacity: 0.9, textShadow: '0 2px 10px rgba(0,0,0,0.8)', marginBottom: '32px' },
+  genre: { fontSize: '16px', fontWeight: 500, opacity: 0.9, textShadow: '0 2px 10px rgba(0,0,0,0.8)' },
   uninstalledBadge: { background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.4)', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 600, display: 'inline-block', marginBottom: '24px' },
   
   playBtn: { display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', color: '#000', padding: '12px 32px', borderRadius: '30px', fontSize: '18px', fontWeight: 700, width: 'fit-content', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' },

@@ -7,6 +7,7 @@ interface Settings {
   theme: Theme
   windowMode: WindowMode
   showUninstalled: boolean
+  steamId: string
 }
 
 interface SettingsContextType {
@@ -15,6 +16,7 @@ interface SettingsContextType {
   setTheme: (theme: Theme) => void
   setWindowMode: (mode: WindowMode) => void
   setShowUninstalled: (show: boolean) => void
+  setSteamId: (id: string) => void
 }
 
 const defaultSettings: Settings = {
@@ -22,6 +24,7 @@ const defaultSettings: Settings = {
   theme: 'dark',
   windowMode: 'fullscreen',
   showUninstalled: true,
+  steamId: '',
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -30,6 +33,7 @@ const SettingsContext = createContext<SettingsContextType>({
   setTheme: () => {},
   setWindowMode: () => {},
   setShowUninstalled: () => {},
+  setSteamId: () => {},
 })
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -42,6 +46,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const theme = await getSetting('theme')
       const windowMode = await getSetting('window_mode')
       const showUninstalledRaw = await getSetting('show_uninstalled')
+      const steamId = await getSetting('steam_id') || ''
 
       const resolvedInput = (inputMode as InputMode) || 'controller'
       const resolvedWindow = (windowMode as WindowMode) || 'fullscreen'
@@ -52,6 +57,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         theme: (theme as Theme) || 'dark',
         windowMode: resolvedWindow,
         showUninstalled: resolvedShowUninstalled,
+        steamId,
       })
 
       await applyWindowMode(resolvedInput)
@@ -88,6 +94,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, showUninstalled: show }))
   }
 
+  async function handleSetSteamId(id: string) {
+    await setSetting('steam_id', id)
+    setSettings(prev => ({ ...prev, steamId: id }))
+  }
+
   if (!loaded) return null
 
   return (
@@ -97,6 +108,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setTheme: handleSetTheme,
       setWindowMode: handleSetWindowMode,
       setShowUninstalled: handleSetShowUninstalled,
+      setSteamId: handleSetSteamId,
     }}>
       {children}
     </SettingsContext.Provider>

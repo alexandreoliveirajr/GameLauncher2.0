@@ -20,6 +20,9 @@ pub async fn fetch_igdb_cover(
     let metadata = crate::igdb::search_game(&game_name, 0).await?;
 
     let Some(meta) = metadata else {
+        // Se não achou na API, coloca descrição vazia para não ficar buscando infinitamente
+        let conn = get_conn(&app)?;
+        let _ = conn.execute("UPDATE games SET description = '' WHERE id = ?1", [&game_id]);
         return Ok(None);
     };
 
@@ -105,4 +108,31 @@ pub async fn save_igdb_data(
     ).map_err(|e| e.to_string())?;
 
     Ok(Some(path_str))
+}
+
+#[tauri::command]
+pub async fn auto_fetch_missing_metadata(app: tauri::AppHandle) -> Result<i32, String> {
+    let games: Vec<(i64, String)> = {
+        let conn = get_conn(&app)?;
+        let mut stmt = conn.prepare("SELECT id, name FROM games WHERE description IS NULL LIMIT 10").map_err(|e| e.to_string())?;
+        
+        let list: Vec<(i64, String)> = stmt.query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        }).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+        list
+    };
+
+    if games.is_empty() {
+        return Ok(0);
+    }
+
+    let mut fetched = 0;
+    for (id, name) in games {
+        // Tenta buscar no IGDB reutilizando a função já pronta
+        if let Ok(Some(_)) = fetch_igdb_cover(app.clone(), id, name.clone()).await {
+            fetched += 1;
+        }
+    }
+    
+    Ok(fetched)
 }

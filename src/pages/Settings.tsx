@@ -2,16 +2,41 @@ import { useState } from 'react'
 import { useSettings } from '../store/SettingsContext'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { invoke } from '@tauri-apps/api/core'
 
 interface Props {
   onClose: () => void
 }
 
 export default function Settings({ onClose }: Props) {
-  const { settings, setInputMode, setWindowMode } = useSettings()
+  const { settings, setInputMode, setWindowMode, setSteamId } = useSettings()
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'up-to-date' | 'error'>('idle')
   const [updateError, setUpdateError] = useState('')
   const [downloadProgress, setDownloadProgress] = useState(0)
+  
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
+  const [syncMessage, setSyncMessage] = useState('')
+
+  async function handleSyncSteam() {
+    if (!settings.steamId) return
+    setSyncStatus('syncing')
+    setSyncMessage('')
+    try {
+      const imported = await invoke('sync_steam_cloud', { 
+        steamId: settings.steamId 
+      })
+      setSyncStatus('success')
+      setSyncMessage(`${imported} novos jogos e tempos de jogo sincronizados!`)
+      // Notifica o app para recarregar a lista (reload da página)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (e) {
+      console.error(e)
+      setSyncStatus('error')
+      setSyncMessage(String(e))
+    }
+  }
 
   async function handleCheckUpdate() {
     setUpdateStatus('checking')
@@ -43,8 +68,15 @@ export default function Settings({ onClose }: Props) {
       }
     } catch (e) {
       console.error(e)
-      setUpdateStatus('error')
-      setUpdateError(String(e))
+      const errorMsg = String(e)
+      // Se a resposta for 404 ou não conseguiu achar o JSON, 
+      // geralmente significa que não há versões mais novas com updater no GitHub ainda.
+      if (errorMsg.includes('Could not fetch a valid release JSON') || errorMsg.includes('404')) {
+        setUpdateStatus('up-to-date')
+      } else {
+        setUpdateStatus('error')
+        setUpdateError(errorMsg)
+      }
     }
   }
 
@@ -132,6 +164,39 @@ export default function Settings({ onClose }: Props) {
             </div>
           </div>
         )}
+
+        <div style={styles.section}>
+          <p style={styles.sectionTitle}>Sincronização em Nuvem</p>
+          <p style={styles.sectionDesc}>
+            Vincule sua conta da Steam para puxar todos os seus jogos e tempo de jogo oficiais. O seu perfil na Steam precisa estar como "Público".
+          </p>
+          <div style={styles.optionRow}>
+            <input 
+              style={styles.input} 
+              type="text" 
+              placeholder="Seu Steam ID (ex: 765611980...)" 
+              value={settings.steamId}
+              onChange={e => setSteamId(e.target.value)}
+            />
+            <div style={styles.aboutBox}>
+              <div>
+                <p style={styles.aboutName}>Status da Sincronização</p>
+                <p style={{...styles.aboutVersion, color: syncStatus === 'error' ? '#ef4444' : syncStatus === 'success' ? '#10b981' : '#6b7280'}}>
+                  {syncStatus === 'idle' && 'Aguardando sincronização'}
+                  {syncStatus === 'syncing' && 'Sincronizando com os servidores...'}
+                  {(syncStatus === 'success' || syncStatus === 'error') && syncMessage}
+                </p>
+              </div>
+              <button 
+                style={styles.btnPrimary} 
+                onClick={handleSyncSteam}
+                disabled={syncStatus === 'syncing' || !settings.steamId}
+              >
+                Sincronizar Steam
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div style={styles.section}>
           <p style={styles.sectionTitle}>Atualizações</p>
@@ -319,6 +384,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     fontWeight: 600,
     cursor: 'pointer',
+    fontFamily: 'Segoe UI, sans-serif',
+  },
+  input: {
+    background: '#151820',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '6px',
+    padding: '10px 14px',
+    color: '#e8eaf0',
+    fontSize: '13px',
+    outline: 'none',
     fontFamily: 'Segoe UI, sans-serif',
   },
 }

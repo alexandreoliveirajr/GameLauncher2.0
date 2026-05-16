@@ -27,6 +27,7 @@ export default function Home() {
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
+  const [detailImgError, setDetailImgError] = useState(false)
   const selectedIdRef = useRef<number | null>(null)
   const filteredRef = useRef<Game[]>([])
 
@@ -216,11 +217,18 @@ export default function Home() {
                       setSelectedId(Number(game.id))
                       selectedIdRef.current = Number(game.id)
                       setDetailTab('info')
+                      setDetailImgError(false)  // reseta o erro ao trocar de jogo
                       loadPlaytime(Number(game.id))
                       loadSessions(Number(game.id))
                     }}
                     onDoubleClick={() => {
-                      if (game.isInstalled) launchGame(game)
+                      if (game.isInstalled) {
+                        launchGame(game)
+                      } else if (game.exePath.startsWith('steam://')) {
+                        import('@tauri-apps/api/core').then(({ invoke }) => {
+                          invoke('install_game', { gameId: game.id })
+                        })
+                      }
                     }}
                   />
                 ))}
@@ -232,12 +240,16 @@ export default function Home() {
           {selectedGame && (
             <div style={styles.detail}>
               <div style={styles.detailThumb}>
-                {selectedGame.coverPath ? (
+                {selectedGame.coverPath && !detailImgError ? (
                   <img
-                    src={convertFileSrc(selectedGame.coverPath.replace(/\\/g, '/')) + '?t=' + Date.now()}
+                    key={selectedGame.id}
+                    src={selectedGame.coverPath?.startsWith('http')
+                      ? selectedGame.coverPath
+                      : convertFileSrc(selectedGame.coverPath.replace(/\\/g, '/')) + '?t=' + Date.now()
+                    }
                     alt={selectedGame.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    onError={e => { e.currentTarget.style.display = 'none' }}
+                    onError={() => setDetailImgError(true)}
                   />
                 ) : (
                   <span style={{ fontSize: '56px' }}>🎮</span>
@@ -266,13 +278,19 @@ export default function Home() {
                   </div>
                   <p style={styles.detailPath}>{selectedGame.exePath}</p>
                   <button 
-                    style={{ ...styles.playBtn, opacity: runningPid || !selectedGame.isInstalled ? 0.5 : 1 }} 
+                    style={{ ...styles.playBtn, opacity: runningPid || (!selectedGame.isInstalled && !selectedGame.exePath.startsWith('steam://')) ? 0.5 : 1 }} 
                     onClick={() => {
-                      if (selectedGame.isInstalled) launchGame(selectedGame)
+                      if (selectedGame.isInstalled) {
+                        launchGame(selectedGame)
+                      } else if (selectedGame.exePath.startsWith('steam://')) {
+                        import('@tauri-apps/api/core').then(({ invoke }) => {
+                          invoke('install_game', { gameId: selectedGame.id })
+                        })
+                      }
                     }} 
-                    disabled={!!runningPid || !selectedGame.isInstalled}
+                    disabled={!!runningPid || (!selectedGame.isInstalled && !selectedGame.exePath.startsWith('steam://'))}
                   >
-                    {!selectedGame.isInstalled ? 'Não Encontrado' : '▶ Jogar'}
+                    {selectedGame.isInstalled ? '▶ Jogar' : (selectedGame.exePath.startsWith('steam://') ? '⬇ Instalar' : 'Não Encontrado')}
                   </button>
                   <button style={styles.editBtn} onClick={() => setShowEdit(true)}>✎ Editar</button>
                   <button

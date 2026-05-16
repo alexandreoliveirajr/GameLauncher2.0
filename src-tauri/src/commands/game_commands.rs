@@ -62,12 +62,16 @@ pub fn add_game(
 pub fn list_games(app: tauri::AppHandle) -> Result<Vec<Game>, String> {
     let conn = get_conn(&app)?;
     let mut stmt = conn.prepare(
-        "SELECT id, name, exe_path, genre, cover_path, description, added_at, is_favorite, last_played_at FROM games ORDER BY name ASC"
+        "SELECT id, name, exe_path, genre, cover_path, description, added_at, is_favorite, last_played_at, is_installed FROM games ORDER BY name ASC"
     ).map_err(|e| e.to_string())?;
 
     let games = stmt.query_map([], |row| {
         let exe_path: String = row.get(2)?;
-        let is_installed = std::path::Path::new(&exe_path).exists();
+        let mut is_installed: bool = row.get(9).unwrap_or(true);
+
+        if !exe_path.starts_with("steam://") && !exe_path.starts_with("com.epicgames") {
+            is_installed = std::path::Path::new(&exe_path).exists();
+        }
 
         Ok(Game {
             id: row.get(0)?,
@@ -101,9 +105,26 @@ pub fn launch_game(
         |row| row.get(0),
     ).map_err(|e| e.to_string())?;
 
-    let child = std::process::Command::new(&exe_path)
-        .spawn()
-        .map_err(|e| format!("Falha ao iniciar '{}': {}", exe_path, e))?;
+    let child = if exe_path.starts_with("steam://") || exe_path.starts_with("com.epicgames") {
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("cmd")
+                .args(["/c", "start", "", &exe_path])
+                .spawn()
+                .map_err(|e| format!("Falha ao iniciar protocolo da loja: {}", e))?
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            std::process::Command::new("xdg-open")
+                .arg(&exe_path)
+                .spawn()
+                .map_err(|e| format!("Falha ao iniciar protocolo: {}", e))?
+        }
+    } else {
+        std::process::Command::new(&exe_path)
+            .spawn()
+            .map_err(|e| format!("Falha ao iniciar '{}': {}", exe_path, e))?
+    };
 
     let pid = child.id();
 
@@ -120,6 +141,37 @@ pub fn launch_game(
     std::mem::forget(child);
 
     Ok(pid)
+}
+
+#[tauri::command]
+pub fn install_game(app: tauri::AppHandle, game_id: i64) -> Result<(), String> {
+    let conn = get_conn(&app)?;
+
+    let exe_path: String = conn.query_row(
+        "SELECT exe_path FROM games WHERE id = ?1",
+        [game_id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    if exe_path.starts_with("steam://") {
+        let install_path = exe_path.replace("rungameid", "install");
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("cmd")
+                .args(["/c", "start", "", &install_path])
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            std::process::Command::new("xdg-open")
+                .arg(&install_path)
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    
+    Ok(())
 }
 
 #[tauri::command]
@@ -329,4 +381,53 @@ pub fn get_global_stats(app: tauri::AppHandle) -> Result<GlobalStats, String> {
         most_played_seconds: most_played.as_ref().map(|(_, s)| *s).unwrap_or(0),
         avg_session_seconds,
     })
+}
+
+#[tauri::command]
+pub async fn auto_import_store_games(app: tauri::AppHandle) -> Result<i32, String> {
+    // Estas funções agora são instantâneas pois apenas leem pequenos TXTs no seu SSD
+    let steam_games = crate::importers::scan_steam_games();
+    let epic_games = crate::importers::scan_epic_games();
+    
+    let conn = get_conn(&app)?;
+
+    // Reseta o status de instalação de todos os jogos das lojas antes da varredura
+    // Isso garante que se você desinstalar um jogo na Steam, ele suma dos instalados aqui na próxima vez que abrir.
+    let _ = conn.execute(
+        "UPDATE games SET is_installed = 0 WHERE exe_path LIKE 'steam://%' OR exe_path LIKE 'com.epicgames%'",
+        [],
+    );
+
+    let mut imported_count = 0;
+
+    for g in steam_games.iter().chain(epic_games.iter()) {
+        let exists: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM games WHERE exe_path = ?1)",
+            [&g.exe_path],
+            |row| row.get(0)
+        ).unwrap_or(false);
+
+        if !exists {
+            conn.execute(
+                "INSERT INTO games (name, exe_path, genre, is_installed, cover_path) VALUES (?1, ?2, ?3, 1, ?4)",
+                (&g.name, &g.exe_path, &g.store, &g.cover_url),
+            ).map_err(|e| e.to_string())?;
+            imported_count += 1;
+        } else {
+            // Se já existir, marcamos como instalado. Se também tivermos uma URL de capa e o DB não tiver, atualizamos a capa também.
+            if let Some(ref cover) = g.cover_url {
+                let _ = conn.execute(
+                    "UPDATE games SET is_installed = 1, cover_path = COALESCE(cover_path, ?2) WHERE exe_path = ?1",
+                    (&g.exe_path, cover),
+                );
+            } else {
+                let _ = conn.execute(
+                    "UPDATE games SET is_installed = 1 WHERE exe_path = ?1",
+                    [&g.exe_path],
+                );
+            }
+        }
+    }
+    
+    Ok(imported_count)
 }

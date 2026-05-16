@@ -2,6 +2,8 @@ mod db;
 mod commands;
 mod gamepad;
 mod igdb;
+pub mod importers;
+pub mod cloud_sync;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -18,6 +20,7 @@ pub fn run() {
             commands::add_game,
             commands::list_games,
             commands::launch_game,
+            commands::install_game,
             commands::is_process_running,
             commands::close_session,
             commands::scan_folder,
@@ -38,7 +41,10 @@ pub fn run() {
             commands::fetch_igdb_cover,
             commands::search_igdb_preview,
             commands::save_igdb_data,
+            commands::auto_fetch_missing_metadata,
             commands::hide_taskbar,
+            commands::auto_import_store_games,
+            cloud_sync::sync_steam_cloud,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
