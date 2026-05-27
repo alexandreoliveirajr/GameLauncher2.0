@@ -147,28 +147,34 @@ pub fn launch_game(
 pub fn install_game(app: tauri::AppHandle, game_id: i64) -> Result<(), String> {
     let conn = get_conn(&app)?;
 
-    let exe_path: String = conn.query_row(
-        "SELECT exe_path FROM games WHERE id = ?1",
+    let (exe_path, install_url): (String, Option<String>) = conn.query_row(
+        "SELECT exe_path, install_url FROM games WHERE id = ?1",
         [game_id],
-        |row| row.get(0),
+        |row| Ok((row.get(0)?, row.get(1)?)),
     ).map_err(|e| e.to_string())?;
 
-    if exe_path.starts_with("steam://") {
-        let install_path = exe_path.replace("rungameid", "install");
-        #[cfg(target_os = "windows")]
-        {
-            std::process::Command::new("cmd")
-                .args(["/c", "start", "", &install_path])
-                .spawn()
-                .map_err(|e| e.to_string())?;
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            std::process::Command::new("xdg-open")
-                .arg(&install_path)
-                .spawn()
-                .map_err(|e| e.to_string())?;
-        }
+    // Usa install_url dedicada (Epic) ou monta a da Steam pelo exe_path
+    let target_url = if let Some(url) = install_url.filter(|u| !u.is_empty()) {
+        url
+    } else if exe_path.starts_with("steam://") {
+        exe_path.replace("rungameid", "install")
+    } else {
+        return Err("Jogo não pode ser instalado por protocolo".to_string());
+    };
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &target_url])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&target_url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
     }
     
     Ok(())
@@ -409,16 +415,15 @@ pub async fn auto_import_store_games(app: tauri::AppHandle) -> Result<i32, Strin
 
         if !exists {
             conn.execute(
-                "INSERT INTO games (name, exe_path, genre, is_installed, cover_path) VALUES (?1, ?2, ?3, 1, ?4)",
-                (&g.name, &g.exe_path, &g.store, &g.cover_url),
+                "INSERT INTO games (name, exe_path, genre, is_installed, cover_path, install_url) VALUES (?1, ?2, ?3, 1, ?4, ?5)",
+                (&g.name, &g.exe_path, &g.store, &g.cover_url, &g.install_url),
             ).map_err(|e| e.to_string())?;
             imported_count += 1;
         } else {
-            // Se já existir, marcamos como instalado. Se também tivermos uma URL de capa e o DB não tiver, atualizamos a capa também.
             if let Some(ref cover) = g.cover_url {
                 let _ = conn.execute(
-                    "UPDATE games SET is_installed = 1, cover_path = COALESCE(cover_path, ?2) WHERE exe_path = ?1",
-                    (&g.exe_path, cover),
+                    "UPDATE games SET is_installed = 1, cover_path = COALESCE(cover_path, ?2), install_url = COALESCE(install_url, ?3) WHERE exe_path = ?1",
+                    (&g.exe_path, cover, &g.install_url),
                 );
             } else {
                 let _ = conn.execute(

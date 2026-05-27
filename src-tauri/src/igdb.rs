@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
 const CLIENT_ID: &str = "lgxanf3dnk8w4ha5nb6ch8n5wgyw5m";
-const CLIENT_SECRET: &str = "jdmym30bezpg946w202n9gj80puy9t";
+const CLIENT_SECRET: &str = "mioyl7w4hhrt5kfv9tori6pkr5zg85";
 
 static TOKEN_CACHE: Mutex<Option<String>> = Mutex::new(None);
 

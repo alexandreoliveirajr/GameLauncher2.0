@@ -53,6 +53,11 @@ pub fn init(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         [],
     );
 
+    let _ = conn.execute(
+        "ALTER TABLE games ADD COLUMN install_url TEXT",
+        [],
+    );
+
     // Corrige o bug de tempo de jogo:
     // Se o launcher foi fechado enquanto um jogo estava rodando, a sessão ficou aberta.
     // Setamos duration_seconds = 0 para não contabilizar 50 horas na próxima vez que abrir.

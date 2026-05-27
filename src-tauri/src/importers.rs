@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 pub struct ImportedStoreGame {
     pub name: String,
     pub exe_path: String,
-    pub store: String, // "Steam" ou "Epic"
+    pub store: String,
     pub cover_url: Option<String>,
+    pub install_url: Option<String>,
 }
 
 /// Varre o diretório padrão da Steam em busca de arquivos .acf
@@ -70,6 +71,7 @@ pub fn scan_steam_games() -> Vec<ImportedStoreGame> {
                                     exe_path: format!("steam://rungameid/{}", appid),
                                     store: "Steam".to_string(),
                                     cover_url: Some(format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900_2x.jpg", appid)),
+                                    install_url: None, // Steam usa steam://install/{appid} montado no Rust
                                 });
                             }
                         }
@@ -81,7 +83,7 @@ pub fn scan_steam_games() -> Vec<ImportedStoreGame> {
     games
 }
 
-/// Varre o diretório padrão da Epic Games
+/// Varre o diretório padrão da Epic Games e extrai metadados dos manifests .item
 pub fn scan_epic_games() -> Vec<ImportedStoreGame> {
     let mut games = Vec::new();
     let manifests_path = Path::new("C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests");
@@ -93,34 +95,52 @@ pub fn scan_epic_games() -> Vec<ImportedStoreGame> {
     if let Ok(entries) = fs::read_dir(manifests_path) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if let Some(ext) = path.extension() {
-                if ext == "item" {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        // Parse JSON rústico sem overhead de desserialização completa
-                        // (Epic salva como .item em formato JSON)
-                        let mut name = String::new();
-                        let mut app_name = String::new();
+            if path.extension().map_or(false, |e| e == "item") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        let name = match json["DisplayName"].as_str() {
+                            Some(n) if !n.is_empty() && n != "Epic Games Launcher" => n.to_string(),
+                            _ => continue,
+                        };
 
-                        for line in content.lines() {
-                            let line = line.trim();
-                            if line.starts_with("\"DisplayName\":") {
-                                let parts: Vec<&str> = line.split('\"').collect();
-                                if parts.len() >= 4 { name = parts[3].to_string(); }
-                            } else if line.starts_with("\"AppName\":") {
-                                let parts: Vec<&str> = line.split('\"').collect();
-                                if parts.len() >= 4 { app_name = parts[3].to_string(); }
-                            }
-                        }
+                        let app_name = match json["AppName"].as_str() {
+                            Some(a) if !a.is_empty() => a.to_string(),
+                            _ => continue,
+                        };
 
-                        if !name.is_empty() && !app_name.is_empty() && name != "Epic Games Launcher" {
-                            games.push(ImportedStoreGame {
-                                name,
-                                // Protocolo da Epic Games
-                                exe_path: format!("com.epicgames.launcher://apps/{}?action=launch&silent=true", app_name),
-                                store: "Epic".to_string(),
-                                cover_url: None,
+                        let catalog_namespace = json["CatalogNamespace"].as_str().unwrap_or("").to_string();
+                        let catalog_item_id = json["CatalogItemId"].as_str().unwrap_or("").to_string();
+
+                        // Monta URL de instalação com todos os identificadores necessários
+                        let install_url = if !catalog_namespace.is_empty() && !catalog_item_id.is_empty() {
+                            Some(format!(
+                                "com.epicgames.launcher://apps/{}%3A{}%3A{}?action=install",
+                                catalog_namespace, catalog_item_id, app_name
+                            ))
+                        } else {
+                            None
+                        };
+
+                        // Extrai a capa vertical "DieselGameBoxTall" do array KeyImages
+                        let cover_url = json["KeyImages"]
+                            .as_array()
+                            .and_then(|images| {
+                                // Prefer DieselGameBoxTall (vertical cover), fallback para qualquer imagem
+                                images.iter()
+                                    .find(|img| img["type"].as_str() == Some("DieselGameBoxTall"))
+                                    .or_else(|| images.iter().find(|img| img["type"].as_str() == Some("DieselGameBox")))
+                                    .or_else(|| images.first())
+                                    .and_then(|img| img["url"].as_str())
+                                    .map(|s| s.to_string())
                             });
-                        }
+
+                        games.push(ImportedStoreGame {
+                            name,
+                            exe_path: format!("com.epicgames.launcher://apps/{}?action=launch&silent=true", app_name),
+                            store: "Epic".to_string(),
+                            cover_url,
+                            install_url,
+                        });
                     }
                 }
             }
