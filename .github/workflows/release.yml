@@ -43,12 +43,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare updater signing key
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
+            Write-Error "TAURI_SIGNING_PRIVATE_KEY secret is missing."
+            exit 1
+          }
+
+          $path = Join-Path $PWD 'src-tauri/tauri-signing.key'
+          $key = $env:TAURI_SIGNING_PRIVATE_KEY.Replace("`r`n", "`n").Replace("`r", "`n").Trim()
+
+          # Fix keys pasted as a single line (comment + base64 separated by spaces)
+          if ($key -notmatch "`n" -and $key -match '^(untrusted comment: minisign encrypted secret key)\s+(.+)$') {
+            $key = "$($Matches[1])`n$($Matches[2])"
+          }
+
+          $lines = $key -split "`n", 2
+          if ($lines.Count -eq 2) {
+            # Remove accidental spaces/tabs inside the base64 payload line
+            $lines[1] = $lines[1] -replace '\s', ''
+            $key = "$($lines[0])`n$($lines[1])"
+          }
+
+          [System.IO.File]::WriteAllText($path, $key)
+          Write-Host "Signing key prepared at $path"
+
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PATH: src-tauri/tauri-signing.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}

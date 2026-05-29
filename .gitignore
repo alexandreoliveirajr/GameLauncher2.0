@@ -28,5 +28,6 @@ dist-ssr
 
 tauri.key
 dashhub.key
+src-tauri/tauri-signing.key
 src-tauri/steam_key.txt
 Correcoes.txt
