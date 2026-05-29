@@ -19,7 +19,7 @@ pub struct SteamGame {
     pub playtime_forever: Option<u32>, // Em minutos
 }
 
-const STEAM_API_KEY: &str = include_str!("../steam_key.txt");
+const STEAM_API_KEY: &str = env!("STEAM_API_KEY");
 
 #[tauri::command]
 pub async fn sync_steam_cloud(

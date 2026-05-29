@@ -38,13 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Inject Steam API Key
-        run: echo "${{ secrets.STEAM_API_KEY }}" > src-tauri/steam_key.txt
-
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:

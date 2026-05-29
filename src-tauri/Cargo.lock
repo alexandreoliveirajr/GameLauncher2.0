@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "dissonance-hub"
-version = "0.1.0"
+version = "0.2.3"
 dependencies = [
  "gilrs",
  "reqwest 0.12.28",

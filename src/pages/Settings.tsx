@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import packageJson from '../../package.json'
 import { useSettings } from '../store/SettingsContext'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
@@ -231,7 +232,7 @@ export default function Settings({ onClose }: Props) {
           <p style={styles.sectionTitle}>Sobre</p>
           <div style={styles.aboutBox}>
             <p style={styles.aboutName}>DASH HUB</p>
-            <p style={styles.aboutVersion}>Versão 0.1.0</p>
+            <p style={styles.aboutVersion}>Versão {packageJson.version}</p>
           </div>
         </div>
 
