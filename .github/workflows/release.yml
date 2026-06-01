@@ -53,34 +53,30 @@ jobs:
             exit 1
           }
 
-          $path = Join-Path $PWD 'src-tauri/tauri-signing.key'
           $key = $env:TAURI_SIGNING_PRIVATE_KEY.Trim()
 
           if ($key -like "dW50cnVzdGVk*") {
-            # If it is the base64-encoded key file, remove ALL whitespace
-            $key = $key -replace '\s', ''
+            # If it is already base64-encoded, remove ALL whitespace
+            $base64key = $key -replace '\s', ''
           } elseif ($key -like "untrusted comment:*") {
-            # If it is the raw key file, split and remove whitespace from the base64 second line
-            $key = $key.Replace("`r`n", "`n").Replace("`r", "`n")
-            $lines = $key -split "`n", 2
-            if ($lines.Count -eq 2) {
-              $lines[1] = $lines[1] -replace '\s', ''
-              $key = "$($lines[0])`n$($lines[1])"
-            }
+            # If it is the raw key file, normalize newlines and convert to base64
+            $normalized = $key.Replace("`r`n", "`n").Replace("`r", "`n")
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+            $base64key = [System.Convert]::ToBase64String($bytes)
           } else {
-            # Fallback: remove all whitespace just in case
-            $key = $key -replace '\s', ''
+            # Fallback: remove all whitespace
+            $base64key = $key -replace '\s', ''
           }
 
-          [System.IO.File]::WriteAllText($path, $key)
-          Write-Host "Signing key prepared at $path"
+          # Set the environment variable for subsequent steps
+          "TAURI_SIGNING_PRIVATE_KEY=$base64key" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Signing key prepared and set in GITHUB_ENV"
 
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PATH: src-tauri/tauri-signing.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
