@@ -54,18 +54,22 @@ jobs:
           }
 
           $path = Join-Path $PWD 'src-tauri/tauri-signing.key'
-          $key = $env:TAURI_SIGNING_PRIVATE_KEY.Replace("`r`n", "`n").Replace("`r", "`n").Trim()
+          $key = $env:TAURI_SIGNING_PRIVATE_KEY.Trim()
 
-          # Fix keys pasted as a single line (comment + base64 separated by spaces)
-          if ($key -notmatch "`n" -and $key -match '^(untrusted comment: minisign encrypted secret key)\s+(.+)$') {
-            $key = "$($Matches[1])`n$($Matches[2])"
-          }
-
-          $lines = $key -split "`n", 2
-          if ($lines.Count -eq 2) {
-            # Remove accidental spaces/tabs inside the base64 payload line
-            $lines[1] = $lines[1] -replace '\s', ''
-            $key = "$($lines[0])`n$($lines[1])"
+          if ($key -like "dW50cnVzdGVk*") {
+            # If it is the base64-encoded key file, remove ALL whitespace
+            $key = $key -replace '\s', ''
+          } elseif ($key -like "untrusted comment:*") {
+            # If it is the raw key file, split and remove whitespace from the base64 second line
+            $key = $key.Replace("`r`n", "`n").Replace("`r", "`n")
+            $lines = $key -split "`n", 2
+            if ($lines.Count -eq 2) {
+              $lines[1] = $lines[1] -replace '\s', ''
+              $key = "$($lines[0])`n$($lines[1])"
+            }
+          } else {
+            # Fallback: remove all whitespace just in case
+            $key = $key -replace '\s', ''
           }
 
           [System.IO.File]::WriteAllText($path, $key)
